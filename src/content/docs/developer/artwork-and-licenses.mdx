@@ -1,0 +1,75 @@
+---
+title: Artwork and licences
+description: Where UFLinux's icons, wallpapers and logo come from, and what licences apply.
+source: docs/artwork.md
+---
+
+import UpstreamSource from '../../../components/UpstreamSource.astro';
+
+The desktop restores the icon theme and default wallpaper selected by the
+[original UFLinux configuration](https://github.com/UFlinux-project/main): Papirus and
+GNOME's *Dark Ivy*. Those assets are third-party artwork used by the original distribution,
+not artwork authored by UFLinux. For the user-facing side, see
+[Appearance and themes](../desktop/appearance.md).
+
+## Where each asset comes from
+
+| Asset | Source | Provenance control |
+| --- | --- | --- |
+| Papirus icons | Alpine's signed `papirus-icon-theme` | resolved-package inventory |
+| `adw-gtk3-dark` | Alpine's signed `adw-gtk3` | resolved-package inventory |
+| Six wallpapers | GNOME 3.38.0 source archive | URL and SHA-512 pinned in the source lock |
+| Leaf logo | Original UFLinux Calamares branding | exact upstream bytes in the artwork lock |
+
+The GNOME archive is verified against GNOME's published checksum file as well, and the
+package builder retains the archive with other rebuild inputs and verifies it during
+extraction. No wallpaper is fetched at login.
+
+The logo is copied unchanged from the original
+[Calamares branding](https://github.com/UFlinux-project/uf-calamares-settings). It appears on
+Ironbar's Start button, the Settings application icon and About, and in the
+[startup animation](../desktop/bootsplash.md), where the fallback and watermark images are
+derived from the upstream bootloader splash without resampling.
+
+## Wallpapers
+
+Six original GNOME 3.38 wallpapers are installed without image modifications in
+`/usr/share/backgrounds/uflinux/`: Dark Ivy, Cold Warm, Endless Shapes, Road and the two
+Symbolics images. This subset has explicit upstream attribution and fits the Settings app's
+16-megapixel image limit. Dark Ivy is the login default, and **Restore default wallpaper**
+selects it again. No GNOME desktop or settings daemon is needed.
+
+## Licences
+
+- UFLinux scripts, Settings and configuration: **GPL-3.0-only**, matching the repository
+  licence.
+- The original UFLinux leaf logo: reused under **GPL-3.0-only**.
+- Dark Ivy by Garrett LeSage; Endless Shapes and the Symbolics images by Jakub Steiner —
+  **CC BY-SA 3.0**.
+- Cold Warm by invisiblepower and Road by Joshua Welch — **CC0**.
+- Papirus is supplied by Alpine and keeps its own licence.
+- Vendored files and distributed packages retain their upstream licences and attribution.
+
+The exact GNOME attribution and licence notice, GPL text and artwork notice are installed in
+`/usr/share/licenses/uflinux-defaults/`. Settings' copy of the logo is covered by its GPL
+licence and source attribution in `settings/README.md`.
+
+## The SPDX inventory
+
+Images ship an SPDX 2.3 inventory that validates against the official JSON schema. It
+inventories APKs physically bundled in the ISO, including packages available for installation
+but not automatically installed at live boot — it is not a claim that every cached package is
+running. Build and verify environment package lists also contain build or test tools and are
+labelled by stage.
+
+Original APK licence annotations are retained in `licenseComments`. `licenseDeclared` and
+`licenseConcluded` use `NOASSERTION`: Alpine annotations can contain non-SPDX strings or omit
+boolean operators, and the inventory does not guess how to reinterpret them.
+
+## What the test suite checks
+
+The package and desktop verification suite checks Papirus and branded icon lookup, SVG
+rendering, every bundled image's dimensions, bounded previews, the Start configuration, and
+actual wallpaper process startup.
+
+<UpstreamSource path="docs/artwork.md" />

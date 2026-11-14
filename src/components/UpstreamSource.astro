@@ -1,0 +1,36 @@
+---
+interface Props {
+	/** Path inside https://github.com/UFlinux-project/uflinux3, e.g. `docs/installing.md`. */
+	path: string;
+	/** Commit the wording was checked against. */
+	commit?: string;
+}
+
+const { path, commit = 'cff7399' } = Astro.props;
+const url = `https://github.com/UFlinux-project/uflinux3/blob/${commit}/${path}`;
+---
+
+<p class="upstream-source">
+	Derived from <a href={url}><code>{path}</code></a> in
+	<a href="https://github.com/UFlinux-project/uflinux3">UFlinux-project/uflinux3</a>
+	<code class="commit">({commit})</code>. Report documentation problems in
+	<a href="https://github.com/UFlinux-project/docs/issues">UFlinux-project/docs</a>.
+</p>
+
+<style>
+	.upstream-source {
+		margin-top: 2.5rem;
+		padding-top: 0.75rem;
+		border-top: 1px solid var(--sl-color-hairline-light);
+		font-size: var(--sl-text-sm);
+		color: var(--sl-color-gray-3);
+	}
+	.upstream-source code {
+		font-size: 0.85em;
+		background: none;
+		padding: 0;
+	}
+	.upstream-source .commit {
+		white-space: nowrap;
+	}
+</style>

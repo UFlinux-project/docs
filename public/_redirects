@@ -1,0 +1,5 @@
+# Cloudflare Pages redirects.
+# Trailing-slash variants of the locale roots, so links written either way work.
+/cs    /cs/   301
+/en    /      301
+/docs  /      301

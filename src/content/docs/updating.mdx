@@ -1,0 +1,73 @@
+---
+title: Updates and packages
+description: How UFLinux systems receive updates, which repositories they use, and how to roll a package back.
+sidebar:
+  order: 4
+source: docs/installing.md
+---
+
+import UpstreamSource from '../../components/UpstreamSource.astro';
+
+An installed UFLinux system is an Alpine system. Updates are ordinary `apk` operations
+against two kinds of repository: the signed **UFLinux** repository carrying the custom
+packages, and the matching Alpine stable **`main`** and **`community`** branches.
+
+```sh
+doas apk update
+doas apk upgrade
+```
+
+The UFLinux repository for the current baseline is:
+
+```text
+https://uflinux-project.github.io/uflinux3/apk/v3.24/uflinux
+```
+
+## Staying on a supported combination
+
+UFLinux pins one Alpine release. **Do not mix edge packages or another Alpine release
+branch into the system** — the desktop stack is built and tested against one branch, and
+mixing pulls in libraries it was not validated with. Moving to a newer Alpine branch
+means an explicitly tested UFLinux release for that branch, not a manual edit of
+`/etc/apk/repositories`.
+
+After upgrading, review `.apk-new` files if you have edited system defaults. UFLinux
+preserves local edits during upgrades, and `.apk-new` holds the packaged version of a
+file you had changed.
+
+## Where configuration lives
+
+| Location | Contents |
+| --- | --- |
+| `/etc/xdg` | Packaged desktop defaults |
+| `~/.config/labwc/` | Personal compositor overrides |
+| `~/.config/uflinux/` | UFLinux Settings and Start menu preferences |
+| `/etc/tlp.d/` | Power profile drop-ins |
+| `/etc/uflinux/power.json` | Physical power-button policy (root-owned) |
+
+Ironbar uses its packaged defaults when no user file is present, so a personal config
+replaces the packaged panel layout rather than extending it.
+
+## Rolling a package back
+
+Inspect what is available before choosing:
+
+```sh
+doas apk policy uflinux-settings
+```
+
+Then install the matching older version explicitly, including its dependencies. For a
+larger rollback, use the immutable signed repository snapshot published with that
+UFLinux release.
+
+Installed XFS roots have **no automatic filesystem snapshots**, so a package rollback is
+the intended tool — not a snapshot restore.
+
+## Signing
+
+UFLinux signs packages with an **EC P-256** key published under the stable filename
+`uflinux.ec.pub`. apk v2 has no ECDSA signature stream, so the signature travels in the
+SHA-256 stream and the stream name `RSA256` describes the digest, not the algorithm. If
+you maintain your own fork, see [Maintenance](./developer/maintenance.md#signing-keys).
+
+<UpstreamSource path="docs/installing.md" />

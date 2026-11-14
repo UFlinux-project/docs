@@ -1,0 +1,83 @@
+---
+title: Repository setup
+description: Configuring a UFLinux fork or the upstream repository for Actions, Pages and signing.
+source: docs/github-setup.md
+---
+
+import UpstreamSource from '../../../components/UpstreamSource.astro';
+
+This page is the concrete checklist for the upstream repository. A fork follows the same
+steps with its own names.
+
+## Repository
+
+Push to a **public** GitHub repository with `main` as the default branch, enable Actions, and
+choose **GitHub Actions** as the Pages source.
+
+Configure the `github-pages` environment to allow deployment from version tags such as `v*` —
+its default-branch restrictions otherwise reject tag builds.
+
+## The APK URL
+
+The build infers the repository URL from `GITHUB_REPOSITORY`:
+
+```text
+https://OWNER.github.io/REPO/apk/v3.24/uflinux
+```
+
+For the upstream project that is
+`https://uflinux-project.github.io/uflinux3/apk/v3.24/uflinux`. Set the `APK_REPOSITORY_URL`
+repository variable to override it, for example on a custom Pages domain. Account-site
+repositories are handled automatically.
+
+## Signing secrets
+
+Prepare a persistent EC P-256 keypair locally, outside the build workspace, following the
+commands in [CI and publishing](./ci-and-publishing.md#keys). Restrict the directory and
+private key to their owner and keep them out of Git.
+
+In **Settings → Secrets and variables → Actions**, add:
+
+| Secret | Contents |
+| --- | --- |
+| `APK_SIGNING_PRIVATE_KEY` | Complete PEM contents of `uflinux.ec` |
+| `APK_SIGNING_PUBLIC_KEY` | Complete PEM contents of `uflinux.ec.pub` |
+
+Both must hold the EC key above; a previously uploaded RSA pair is rejected by the build
+rather than silently accepted. apk v2 has no ECDSA signature type, so the key is carried in
+the SHA-256 signature stream — see [Maintenance](./maintenance.md#signing-keys).
+
+Back up the private key before publishing a release. Do not commit it or paste it into
+issues, logs or chat.
+
+## What each run does
+
+- Pushes to `main` and manual dispatch build development images **without** release secrets.
+- A version tag builds the release package set and exposes the key only to trusted signing,
+  assembly and publication jobs.
+- Publication is gated on all seven architecture checks plus native integration and
+  reproducibility records.
+- Pages keeps three release generations and checks the complete bundle's size before
+  deploying.
+
+## First run
+
+```sh
+python3 scripts/check.py          # run before pushing
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Run the workflow manually first to inspect development artifacts, then tag.
+
+## Adopting a fork
+
+Two placeholders need replacing before a public release:
+
+- the reserved `noreply@example.invalid` packager identity, which is a syntactically valid
+  default and not a monitored support address;
+- the package project URL, which should point at your actual repository.
+
+See [Maintenance](./maintenance.md) for what else changes when you take over a fork.
+
+<UpstreamSource path="docs/github-setup.md" />

@@ -1,0 +1,98 @@
+---
+title: Quick start
+description: Boot the UFLinux live image, get online, and try the desktop before installing.
+sidebar:
+  order: 2
+source: README.md
+---
+
+import UpstreamSource from '../../components/UpstreamSource.astro';
+
+This page takes you from a downloaded ISO to a running desktop. If you only want to try
+UFLinux, stop after [Explore the live session](#explore-the-live-session) — nothing is
+written to your disk until you run the installer.
+
+## 1. Download and verify
+
+Grab the ISO for your machine from the
+[latest release](https://github.com/UFlinux-project/uflinux3/releases) together with its
+`SHA256SUMS` file, then check it:
+
+```sh
+sha256sum -c SHA256SUMS
+```
+
+If you have the [`gh` CLI](https://cli.github.com/), you can also verify the build
+attestation:
+
+```sh
+gh attestation verify uflinux-0.1.0-x86_64.iso --repo UFlinux-project/uflinux3
+```
+
+See [Downloads and verification](./reference/releases.md) for the full list of files.
+
+Most desktop machines want the **x86_64** ISO. It is the only image that has been
+boot-tested, on both legacy BIOS and UEFI firmware.
+
+## 2. Boot the live image
+
+Write the ISO to a USB stick — GNOME Disks, `dd`, or `pnpm`-style writers all work:
+
+```sh
+doas dd if=uflinux-0.1.0-x86_64.iso of=/dev/sdX bs=4M oflag=sync status=progress
+```
+
+Boot from it. The live desktop starts automatically and logs you in as `live`. On a
+serial console, use **live / live**.
+
+The live session runs entirely from the media and does not need a network connection to
+reach the desktop. Two things to know:
+
+- The `live` account can run `doas` **without a password**. The root account is locked.
+- SSH is not enabled, so the machine is not reachable from the network by default.
+
+The live image loads its root filesystem into RAM and includes Alpine's full
+`linux-firmware` collection, so it needs noticeably more memory than an installed
+system. Plan for at least 4 GiB.
+
+## 3. Get online
+
+Networking is handled by **ConnMan** with **iwd** as its Wi-Fi backend. There is no
+`wpa_supplicant`, no NetworkManager, and no `ntpd`/`chronyd` — ConnMan's own SNTP client
+keeps the clock.
+
+Pick **Network** in the panel, or open **Settings → Network**, select your access point,
+and enter the passphrase. From a console, `connmanctl` works as usual.
+
+## 4. Explore the live session
+
+The panel holds the launcher, taskbar, tray, and separate Network, Sound and Power menus.
+The basics:
+
+| Keys | Action |
+| --- | --- |
+| `Super` | Open the Start menu |
+| `Super` + `Space` | Application launcher |
+| `Super` + `Enter` | Terminal (Foot) |
+| `Super` + `E` | Files (Nemo) |
+| `Super` + `I` | Settings |
+| `Super` + `D` | Show the desktop |
+| `Print Screen` | Screenshot and recording tool |
+
+Installed applications include Foot, Nemo, Firefox with uBlock Origin, Celluloid,
+Transmission, GNOME Disks and File Roller. See
+[Desktop overview](./desktop/overview.md) for the full picture and
+[Keyboard shortcuts](./reference/keyboard-shortcuts.md) for every binding.
+
+## 5. Install when you are ready
+
+The graphical installer opens automatically in the live desktop; you can also start
+**Install UFLinux** from the application menu.
+
+Before you do, check your partitioning plan. UFLinux **never partitions and never
+formats** anything on your behalf in the "prepared" mode, and the guided mode erases a
+whole disk. The installed root must be **XFS** with a separate `/boot`.
+
+[Installation](./installing.md) walks through both modes and the command-line installer.
+
+<UpstreamSource path="README.md" />

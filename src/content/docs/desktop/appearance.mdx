@@ -1,0 +1,75 @@
+---
+title: Appearance and themes
+description: UFLinux defaults for icons, GTK themes, window decorations and wallpapers, and how to override them.
+source: docs/artwork.md
+---
+
+import UpstreamSource from '../../../components/UpstreamSource.astro';
+
+UFLinux ships a dark desktop assembled from upstream themes rather than bespoke ones. The
+defaults restore the icon theme and wallpaper chosen by the
+[original UFLinux configuration](https://github.com/UFlinux-project/main): Papirus icons
+and GNOME's *Dark Ivy*.
+
+| Aspect | Default | Source |
+| --- | --- | --- |
+| Icons | Papirus | Alpine's signed `papirus-icon-theme` |
+| GTK3 and GTK4 | `adw-gtk3-dark` | Alpine's signed `adw-gtk3` |
+| Window decorations | `labAdwaita-dark` | labwc |
+| Wallpaper | Dark Ivy | GNOME 3.38 artwork |
+| Fallback icons | Adwaita | Alpine |
+
+No global `GTK_THEME` override is set, so personal themes and accessibility preferences
+can take precedence.
+
+## Changing the theme
+
+Use **Settings → Appearance**. The wallpaper chooser starts in the bundled collection, and
+**Restore default wallpaper** selects Dark Ivy again.
+
+Personal preferences always win over the packaged defaults:
+
+- GTK3 and GTK4 read XDG `settings.ini` files and matching GSettings schema defaults.
+  GTK3 on Wayland reads the desktop schemas when installed, which take precedence over
+  `settings.ini`; the packaged schema override is what keeps the theme, icons and font
+  consistent and selects the dark colour scheme. Your own GSettings preferences for GTK3
+  and your personal `settings.ini` for GTK4 still take precedence over it.
+- labwc decorations and menus come from `labAdwaita-dark`. A session helper reads the
+  selected GTK3 theme's named header colours once at startup and applies them to labwc, so
+  **theme changes take effect at the next login**.
+
+To take manual control of labwc decorations, edit the first line of
+`~/.config/labwc/themerc-override` (or your own `rc.xml`) — a personal file stays in
+control. Themes without simple named header colours, and GTK4 apps with their own theme
+overrides, may still look different.
+
+## Wallpapers
+
+Six original GNOME 3.38 wallpapers are installed unmodified in `/usr/share/backgrounds/uflinux/`:
+Dark Ivy, Cold Warm, Endless Shapes, Road, and the two Symbolics images. Dark Ivy is the
+login default. No GNOME desktop or settings daemon is involved, and no wallpaper is
+fetched at login.
+
+Wallpaper settings accept local files up to 32 MiB and 16 megapixels, with fit, colour and
+per-output preferences, and use only UFLinux-owned `swaybg` child processes.
+
+## The leaf logo
+
+The leaf is copied unchanged from the original
+[Calamares branding](https://github.com/UFlinux-project/uf-calamares-settings) of the
+project. It appears on the Start button, the Settings application icon, the About page, and
+the [startup animation](./bootsplash.md). Imported SVGs are checked against the exact
+upstream bytes recorded in the build's artwork lock.
+
+## Licences
+
+UFLinux's own code and packages are `GPL-3.0-only`. The bundled artwork keeps its own
+terms: the logo is GPL-3.0-only; Dark Ivy is by Garrett LeSage, Endless Shapes and the
+Symbolics images by Jakub Steiner, under CC BY-SA 3.0; Cold Warm is by invisiblepower and
+Road by Joshua Welch, under CC0.
+
+The full attribution, GPL text and artwork notice are installed under
+`/usr/share/licenses/uflinux-defaults/`. Images also ship an SPDX inventory of what is
+physically bundled — see [Artwork and licences](../developer/artwork-and-licenses.md).
+
+<UpstreamSource path="docs/artwork.md" />

@@ -1,0 +1,72 @@
+---
+title: Startup animation
+description: How the UFLinux boot splash composes with the firmware logo, and how to turn it off.
+source: docs/bootsplash.md
+---
+
+import UpstreamSource from '../../../components/UpstreamSource.astro';
+
+UFLinux shows the same composition on every machine: the firmware's own boot logo keeps
+the centre of the screen, the UFLinux spinner rotates below it, and the UFLinux logotype
+sits below the spinner.
+
+The layout follows what UEFI machines report through the ACPI **BGRT** table, so the
+vendor logo is never moved, scaled or overpainted. On machines without BGRT — legacy BIOS,
+most ARM boards, virtual machines — a fallback leaf occupies exactly the same slot, so
+nothing shifts.
+
+## Turning it off
+
+Add any of these to the kernel command line to disable the splash and keep normal boot
+output:
+
+```text
+splash=no    nosplash    plymouth.enable=0
+```
+
+No artificial delay is added to a normal boot either way.
+
+## How it works
+
+The theme uses Plymouth's `two-step` module with `UseFirmwareBackground=true` — the only
+Plymouth plugin that reads `/sys/firmware/acpi/bgrt/{status,xoffset,yoffset,image}`. The
+theme lives in `/usr/share/plymouth/themes/uflinux`, and its packaged configuration is
+`/etc/plymouth/plymouthd.conf`.
+
+The upstream bootloader splash is kept unaltered as `uflinux-splash-original.png`. Its
+leaf box and logotype box are copied into the fallback and watermark images with the black
+background converted to alpha and no resampling, so both compose correctly over a vendor
+logo. The spinner is 24 frames at a 15-degree step, animated by the `two-step` module
+itself. Separate images cover the passphrase and filesystem-check dialogs.
+
+### Boot lifecycle
+
+`uflinux-initramfs-init` runs Alpine's own init with three injected hooks: it prepares
+`/run` before kernel options are read, starts the splash as soon as boot-driver module
+probes finish — right after `simpledrm`, so the animation is up before root probing or the
+live image's package unpacking — repeats that start at both single-user checkpoints for
+slow device nodes, and calls `plymouth update-root-fs` at each root handoff so the daemon
+survives `switch_root`.
+
+If Alpine's init no longer has the expected structure, the wrapper boots it unmodified and
+the OpenRC services take over. `uflinux-splash` runs in the `sysinit` runlevel after
+hardware discovery, and `uflinux-splash-stop` releases the display before the greeter
+starts. Both live and installed images enable these services, which also cover the case
+where the initramfs hooks were skipped.
+
+## What to expect on unusual hardware
+
+The renderer uses the local virtual terminal and the DRM framebuffer device. Serial output
+stays available, and machines with neither a local VT nor a graphics device simply skip the
+splash.
+
+Daemon startup and client calls are bounded. A renderer failure does not stop the boot — it
+records a short message and continues; details are in `/run/uflinux-splash/daemon.log`,
+which is private to root. No Plymouth daemon is intended to remain after the display
+handoff.
+
+Architecture support does not guarantee a usable local GPU, so the splash on physical
+graphics hardware beyond the tested x86_64 VM is still open. See
+[Validation record](../developer/validation.md).
+
+<UpstreamSource path="docs/bootsplash.md" />

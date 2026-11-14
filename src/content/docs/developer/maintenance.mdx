@@ -1,0 +1,126 @@
+---
+title: Maintenance
+description: Keeping the Alpine base current, upgrading pinned inputs, signing keys and key rotation.
+source: docs/maintenance.md
+---
+
+import UpstreamSource from '../../../components/UpstreamSource.astro';
+
+UFLinux pins one Alpine release, and keeping that pin healthy is the core of maintenance.
+
+## Staying on a supported base
+
+Keep the Alpine branch on a currently supported release with **both `main` and `community`
+support**. Alpine's desktop packages largely live in `community`, whose support ends earlier
+than `main`'s — do not assume the kernel's support lifetime also covers the desktop stack.
+
+## Updating a pinned source
+
+1. Select and review an Alpine stable release and aports commit. Obtain each architecture's
+   official minirootfs and verify its published signatures and hashes.
+2. Update the versions, archive URLs, SHA-256/SHA-512 values, aports commit and source epoch
+   in `config/sources.lock.json`. Record immutable commits and actual archive hashes — avoid
+   moving branches and tags as build inputs.
+3. When upgrading Ironbar, update its APKBUILD version, commit URL, build directory,
+   checksum and desktop dependency. Review its Cargo lockfile, minimum Rust and GTK
+   requirements, feature names, config schema and labwc compatibility. Check its patch
+   against the pinned upstream revision, and keep the originating-monitor environment test.
+4. When changing Alpine branches, update the branch URLs in the UFLinux APKBUILD and the
+   overlay generator together with the lockfile and publishing path. Recheck the pinned
+   `mkimage` compatibility patch against the new source.
+5. Update the `uflinux` package version and the distribution default version. Bump Ironbar's
+   `pkgrel` for packaging, flag or patch changes without an upstream version change, and
+   update the exact desktop dependency at the same time.
+6. Run `python3 scripts/update-checksums.py` after changing local package assets, inspect the
+   diff, run `scripts/check.py`, then use the full manual build matrix.
+7. Review package, boot and desktop reports before creating the version tag.
+
+## ConnMan
+
+ConnMan is a maintained custom package, not a pass-through. Track Alpine's ConnMan security
+updates and upstream releases, update its locked source, hash and package revision, and
+rebase the small iwd credential-delegation patch before release.
+
+Its private driver flag must remain confined to iwd, and authentication or CA and server
+verification must not be bypassed. Keep the package's D-Bus rules: group `netdev` may control
+ConnMan but may not mutate `net.connman.Clock`, and that deny has to stay inside the netdev
+policy because D-Bus applies console and context policies in a fixed order.
+
+Re-run the real PEAP, TTLS and TLS tests — including server-domain mismatch rejection —
+before publishing a changed network stack. The desktop pins the tested revision so an
+unrelated official package cannot silently drop the fix.
+
+## Device targets
+
+Boards are pinned in `config/devices.json` and `config/devices.lock.json`. Adding a board is a
+config change plus a package-availability check; nothing in the builder has to learn about it.
+
+The optional Nura repository is a separate distribution. When the Alpine branch is raised, its
+branch, index hash and supported architecture list must be re-verified against the matching
+Nura release before the device stage can use it again, and board package lists re-checked with
+`scripts/check-packages.py`.
+
+## Adopting a fork
+
+Replace the reserved `noreply@example.invalid` packager identity with a real maintainer
+identity before public releases, and set the package project URL to your actual repository.
+
+Dependabot updates pinned GitHub Actions; the pinned actionlint Go source commit is reviewed
+separately. Changes to runner images, QEMU, firmware, Alpine's kernel or Ironbar require the
+relevant tests to pass again — **do not mark failed targets as optional simply to produce a
+release**.
+
+## Signing keys
+
+Back up the release private key securely outside both Git and Actions caches. Never commit it
+or upload `.state`; that directory contains development keys and temporarily contains the
+release key during signing. Published metadata includes only public keys and key paths, never
+private PEM contents.
+
+UFLinux signs with an **EC P-256** key. apk v2 has no ECDSA signature: apk-tools 3.0.9
+recognises only the stream names `RSA512`, `RSA256`, `RSA` and `DSA`, and selects a trusted
+key by its **filename** from a plain public-key PEM, so an X.509 certificate is not accepted
+as a key. The EC signature is therefore carried in the SHA-256 stream, and the stream name
+`RSA256` describes that digest, not the algorithm. `abuild-sign` supports this directly — it
+accepts any OpenSSL-capable private key under `-t RSA256`.
+
+The key uses the stable filename `uflinux.ec.pub`, because apk v2 signatures refer to that
+filename. Keep the same key across routine releases.
+
+### Rotating a key
+
+For a planned rotation, distribute the replacement public key to installed systems through an
+independently authenticated channel **before** switching the signing secret. Replacing an
+already trusted key is an administrator operation; this version does not implement unattended
+key rollover or dual-signature migration.
+
+Retained old-generation APKs must also be verified with the old key and re-signed with the
+replacement key before being combined into the new repository. The publisher deliberately
+fails if those signatures no longer match rather than silently trusting an old snapshot's
+bundled key, so keep the prior key and snapshot available during the migration.
+
+For an unexpected compromise, revoke the old key through your authenticated release channel
+and **rebuild** affected packages rather than merely re-signing unknown binaries.
+
+## Reproducibility and regression review
+
+Compare like with like: the same source commit, source epoch, rootfs, source archives, Cargo
+lockfile, toolchain APKs, runtime APKs, build paths and release flags. Development signature
+streams differ because development keys are ephemeral, so
+`builder.unsigned_digest()` compares APK control and payload archives with signature streams
+excluded — it still includes control metadata and timestamps, and matching only the executable
+is a weaker check.
+
+Record the baseline ISO size, stripped Ironbar size, boot time and desktop RSS from attached
+records. No unmeasured minimum-memory or performance claim is implied by the word
+"lightweight".
+
+Settings changes require `cargo fmt` and frozen workspace tests. Do not re-enable Ironbar's
+removed NetworkManager and volume modules while using the combined Settings backend.
+
+Before release, review PSS, idle CPU, mapped-frame latency, binary and ISO size, and physical
+hardware coverage separately. Only the x86_64 ISO is boot-tested; the other architectures are
+published without a boot report. An older development ISO's historical record is not a
+substitute for validating a changed desktop stack.
+
+<UpstreamSource path="docs/maintenance.md" />

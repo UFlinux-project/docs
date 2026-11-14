@@ -1,0 +1,61 @@
+---
+title: Boot-image compression
+description: Why UFLinux ISOs use Zstandard for the initramfs and modloop, and what that changed about image sizes.
+source: docs/compression.md
+---
+
+import UpstreamSource from '../../../components/UpstreamSource.astro';
+
+UFLinux ISO initramfs and signed modloop images use **Zstandard level 19**. Device disk
+images use **Zstandard level 12** for the whole raw GPT image. SquashFS keeps 128 KiB blocks,
+which bounds per-block decompression memory, and XZ-specific BCJ filters are removed.
+
+## How it is wired up
+
+The image builder installs the Zstandard compressor in its build root, without adding it as a
+desktop dependency. It copies Alpine's `update-kernel` into an image-only tools directory and
+applies the locked compression patch, checking the patch checksum and requiring
+`CONFIG_RD_ZSTD=y` and `CONFIG_SQUASHFS_ZSTD=y` in the selected kernel configuration before
+proceeding.
+
+All seven supported architectures have both capabilities in Alpine's `linux-lts` kernel APKs.
+
+The image-only helper removes device firmware from the modloop before signing; the wireless
+regulatory database stays there. Alpine's `mkinitfs` still selects firmware for initramfs
+drivers, and the live root includes Alpine's full `linux-firmware` package collection. Devices
+that need firmware before the live root is populated depend on the initramfs selection.
+
+**Your installed system is unaffected**: Alpine's installed helper and installed-system
+`mkinitfs` settings are unchanged.
+
+After ISO extraction, the builder checks the Zstandard frame magic, the SquashFS compressor
+identifier and block size, and tests the complete initramfs stream. Results go to
+`checks/ARCH/compression.json`, and the source and build inventories record the compression
+policy and patch checksum.
+
+## What it measured
+
+Two x86_64 development images with identical desktop packages and artwork, before and after
+the change. No application recompilation was needed — existing custom APKs were verified and
+signed with a new development key before assembly.
+
+| Component | Previous gzip/XZ image | Zstandard image |
+| --- | ---: | ---: |
+| Initramfs | 173.29 MiB | 159.71 MiB |
+| Modloop | 289.78 MiB | 300.30 MiB |
+| ISO | 945.00 MiB | 942.00 MiB |
+
+The net ISO reduction is 3.00 MiB: the initramfs shrank, the modloop grew, and the total
+barely moved. These measurements do **not** establish a boot-time improvement or repeat-build
+reproducibility, and other architectures may have different size trade-offs.
+
+## Validation
+
+The x86_64 image passed both BIOS and UEFI live boot, signed-modloop mounting, Ironbar
+validation, XFS installation and reboot, and preservation of an unrelated partition. Installed
+Settings, flyout, GTK authentication, TLP and ACPI tests passed at 512 MiB with one display, no
+swap and no OOM. Network hwsim fixtures were not repeated.
+
+Other architecture images have not been rebuilt or boot-tested for this change.
+
+<UpstreamSource path="docs/compression.md" />

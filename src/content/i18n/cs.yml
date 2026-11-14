@@ -1,0 +1,4 @@
+# Overrides for Starlight's built-in Czech interface strings.
+# Everything not listed here uses the Czech translations shipped with Starlight.
+"page.editLink": "Navrhnout změnu"
+"i18n.untranslatedContent": "Tato stránka zatím není přeložená, zobrazuje se anglická verze."

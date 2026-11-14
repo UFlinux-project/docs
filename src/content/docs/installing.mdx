@@ -1,0 +1,117 @@
+---
+title: Installation
+description: How to install UFLinux, including the required XFS root, separate boot partition, and the command-line installer.
+sidebar:
+  order: 3
+source: docs/installing.md
+---
+
+import UpstreamSource from '../../components/UpstreamSource.astro';
+
+UFLinux installs from the same ISO you boot as a live system. The installer writes
+packages from the signed media repository, so an offline install works; pass `--online`
+to allow official Alpine mirrors for packages that are not on the media.
+
+Board images for Raspberry Pi, Qualcomm, SpacemiT K1 and virtual machines skip this page
+entirely — they are written to the whole disk and are already installed. See
+[Device images](./devices/index.md).
+
+## What the installer expects
+
+UFLinux is deliberately conservative about your disk. It does not resize, shrink, or
+reuse anything, and it will not create your layout for you in "prepared" mode.
+
+The installed root filesystem **must be XFS**, and `/boot` must be a separate filesystem:
+
+| Firmware | Root | Boot filesystem |
+| --- | --- | --- |
+| UEFI | XFS at `/mnt` | FAT32 EFI system partition at `/mnt/boot` |
+| Legacy BIOS | XFS at `/mnt` | ext4 at `/mnt/boot` |
+| PowerPC | XFS at `/mnt` | ext4 at `/mnt/boot`, plus a PReP partition |
+| s390x | XFS at `/mnt` | ext4 at `/mnt/boot`, zipl-compatible layout |
+
+1 GiB is a practical size for `/boot`; 8 GiB is a practical minimum for the root.
+
+For BIOS layouts, the `/boot` partition has to be marked bootable: the
+`LegacyBIOSBootable` attribute on GPT, or the active flag on a primary MBR partition
+(it must be the only partition carrying that flag).
+
+ARM and RISC-V installations require UEFI in this release. Board-specific U-Boot layouts
+and Raspberry Pi installation are outside the ISO installer. DASD storage is not
+supported.
+
+## Graphical installer
+
+The installer opens automatically in the live desktop, and **Install UFLinux** is in the
+application menu. Choose a language, keyboard, source, disk, account and time zone, then
+review the proposed changes. Nothing is written until you acknowledge them and select
+**Install**. Configure networking first if you want an online install.
+
+Two modes are offered:
+
+- **Guided** erases the whole selected disk and creates an XFS root plus a 1 GiB boot
+  filesystem. On PowerPC it also creates the PReP partition.
+- **Prepared** uses an existing empty XFS root and a compatible boot partition on the
+  same disk. It does not format or repartition them, though boot files and bootloader
+  sectors may be replaced.
+
+The disk list excludes mounted, in-use and live-media disks. If you close the window
+during an installation it only hides — reopen **Install UFLinux** to see progress.
+
+## Command-line installer
+
+Prepare and mount the partitions yourself. Formatting commands destroy data, and the CLI
+installer intentionally never runs them.
+
+```sh
+doas uflinux-install --target /mnt --user alice --dry-run
+
+# BIOS or PowerPC also need the whole boot disk:
+doas uflinux-install --target /mnt --user alice --boot-disk /dev/sda --dry-run
+```
+
+Check the devices it prints, then run the same command without `--dry-run`. You confirm
+by typing a phrase containing the root filesystem's UUID, then set and repeat a password
+of at least eight characters for the new user.
+
+Optional flags:
+
+| Flag | Meaning |
+| --- | --- |
+| `--hostname NAME` | Set the machine's hostname |
+| `--boot-mode uefi\|bios\|native\|auto` | Override firmware detection; `bios` for x86 legacy BIOS, `native` for PowerPC or s390x |
+| `--online` | Allow official Alpine mirrors for packages missing from the media |
+
+The root must be empty apart from `boot` and `lost+found`. Concurrent installations are
+rejected with a lock, and `--dry-run` changes nothing.
+
+## What gets written
+
+UEFI systems get **systemd-boot** with its kernel and initramfs stored directly on the
+EFI system partition, so package updates replace the files the firmware actually boots.
+UFLinux registers itself in the UEFI firmware and also installs its fallback boot path.
+
+The installed system receives:
+
+- a new regular user with password-authenticated `doas`, and a **locked root** account;
+- the full stable update repository list — the signed UFLinux repository plus the
+  matching Alpine `main` and `community`;
+- ReGreet as the greeter, using the adw-gtk3 dark theme, starting the UFLinux desktop
+  directly with no session selector;
+- an initramfs containing the graphics drivers that were active during installation, so
+  early graphics need little firmware. Other drivers and the full firmware collection
+  load after the root filesystem mounts.
+
+Live credentials, live autologin and live-only services are not carried over. Wi-Fi
+secrets are not copied — reconnect in Settings after the first boot.
+
+If an installation fails, do not boot the partial target. Read the reported failure, then
+clean and reprepare the target before retrying.
+
+If you change the graphics hardware later, the system may fall back to the firmware
+framebuffer during early boot. Updating `/etc/mkinitfs/features.d/uflinux-graphics.modules`
+and rebuilding the initramfs restores early loading for the new driver.
+
+Unmount the target filesystems and remove the media before booting the installed system.
+
+<UpstreamSource path="docs/installing.md" />

@@ -1,0 +1,115 @@
+---
+title: Instalace
+description: Jak nainstalovat UFLinux, včetně požadovaného kořene XFS, samostatného oddílu /boot a příkazového instalátoru.
+sidebar:
+  order: 3
+source: docs/installing.md
+---
+
+import UpstreamSource from '../../../components/UpstreamSource.astro';
+
+UFLinux se instaluje ze stejného ISO, ze kterého bootujete live systém. Instalátor balíčky
+bere z podepsaného repozitáře na médiu, takže instalace offline funguje; přepínač `--online`
+povolí i oficiální zrcadla Alpine pro balíčky, které na médiu nejsou.
+
+Obrazy pro desky — Raspberry Pi, Qualcomm, SpacemiT K1 a virtuální stroje — tuto stránku
+přeskočily: zapisují se na celý disk a nainstalované už jsou. Viz
+[Obrazy pro zařízení](./devices/index.md).
+
+## Co instalátor očekává
+
+UFLinux je k disku záměrně konzervativní. V režimu „připraveno" nic nemění velikost,
+nesnižuje ani nic nepřebírá, a rozdělení vám nezaloží.
+
+Kořenový systém **musí být XFS** a `/boot` musí být samostatný souborový systém:
+
+| Firmware | Kořen | Souborový systém pro /boot |
+| --- | --- | --- |
+| UEFI | XFS na `/mnt` | FAT32 EFI systémový oddíl na `/mnt/boot` |
+| Legacy BIOS | XFS na `/mnt` | ext4 na `/mnt/boot` |
+| PowerPC | XFS na `/mnt` | ext4 na `/mnt/boot` a navíc PReP oddíl |
+| s390x | XFS na `/mnt` | ext4 na `/mnt/boot`, layout vhodný pro zipl |
+
+Praktická velikost `/boot` je 1 GiB, pro kořen aspoň 8 GiB.
+
+U BIOS layoutů musí být oddíl `/boot` označený jako zaváděcí: atribut `LegacyBIOSBootable` na
+GPT, nebo příznak active na primárním oddílu MBR (musí být jediný, který ho má).
+
+Instalace na ARM a RISC-V vyžadují v této verzi UEFI. Layouty s U-Boot a instalace na
+Raspberry Pi jsou mimo tento instalátor. DASD úložiště se nepodporuje.
+
+## Grafický instalátor
+
+Instalátor se otevírá sám a **Instalovat UFLinux** je i v nabídce aplikací. Zvolte jazyk,
+klávesnici, zdroj, disk, účet a časové pásmo a zkontrolujte navržené změny. Nic se nezapisuje,
+dokud je nepotvrdíte a nevyberete **Instalovat**. Pokud chcete instalaci po síti, nastavte síť
+dřív.
+
+Nabízené jsou dva režimy:
+
+- **Vedený** smaže celý vybraný disk a vytvoří kořen XFS a 1 GiB zaváděcí systém. Na PowerPC
+  vytvoří i PReP oddíl.
+- **Připravený** použije existující prázdný kořen XFS a kompatibilní zaváděcí oddíl na stejném
+  disku. Nepřeformátuje je ani nepřerozdělí, ale soubory pro boot a zaváděcí sektory můžou být
+  nahrazeny.
+
+Seznam disků vylučuje připojené, používané a samotné live médium. Když okno během instalace
+zavřete, jen se skryje — znovu otevřete **Instalovat UFLinux** a uvidíte průběh.
+
+## Příkazový instalátor
+
+Oddíly si připravte a připojte sami. Formátovací příkazy ničí data a příkazový instalátor je
+záměrně nespouští.
+
+```sh
+doas uflinux-install --target /mnt --user alice --dry-run
+
+# BIOS nebo PowerPC potřebují navíc celý zaváděcí disk:
+doas uflinux-install --target /mnt --user alice --boot-disk /dev/sda --dry-run
+```
+
+Zkontrolujte vypsaná zařízení a spusťte stejný příkaz bez `--dry-run`. Potvrzení napíšete podle
+fráze s UUID kořenového systému a pak nastavíte a zopakujete heslo s alespoň osmi znaky pro
+nového uživatele.
+
+Volitelné přepínače:
+
+| Přepínač | Význam |
+| --- | --- |
+| `--hostname NAME` | Nastavit název stroje |
+| `--boot-mode uefi\|bios\|native\|auto` | Přepsat detekci firmwaru; `bios` pro legacy BIOS x86, `native` pro PowerPC nebo s390x |
+| `--online` | Povolit zrcadla Alpine pro balíčky chybějící na médiu |
+
+Kořen musí být prázdný kromě `boot` a `lost+found`. Souběžné instalace jsou odmítnuty zámkem a
+`--dry-run` nic nemění.
+
+## Co se zapíše
+
+Systémy s UEFI dostanou **systemd-boot** s jádrem a initramfs přímo na EFI systémovém oddíle,
+takže aktualizace balíčků vymění soubory, které firmware skutečně startuje. UFLinux se
+zaregistruje ve firmware UEFI a nainstaluje i svou záložní cestu.
+
+Nainstalovaný systém dostane:
+
+- nový běžný účet s `doas` ověřovaným heslem a **zamčeným účtem root**;
+- úplný seznam stabilních repozitářů — podepsaný repozitář UFLinux a odpovídající Alpine
+  `main` a `community`;
+- ReGreet jako přihlašovací obrazovku s tmavým motivem adw-gtk3, která startuje prostředí
+  přímo a bez výběru relace;
+- initramfs s grafickými ovladači, které byly aktivní během instalace, takže raná grafika
+  potřebuje málo firmwaru. Ostatní ovladače a celá kolekce firmwaru se načtou po připojení
+  kořenového systému.
+
+Přihlašovací údaje z live relace, automatické přihlášení a služby jen pro live se nepřenášejí.
+Hesla k Wi-Fi se nekopírují — po prvním startu se znovu připojte v Nastavení.
+
+Když instalace selhává, částečný cíl nespouštějte. Přečtěte si hlášenou chybu a cíl před
+opakováním vyčistěte a připravte znovu.
+
+Pokud později vyměníte grafický hardware, systém může při raném startu použít framebuffer
+firmwaru. Aktualizací `/etc/mkinitfs/features.d/uflinux-graphics.modules` a sestavením
+initramfs se rané načtení pro nový ovladač vrátí zpět.
+
+Před startem nainstalovaného systému odpojte cílové souborové systémy a vyjměte médium.
+
+<UpstreamSource path="docs/installing.md" />

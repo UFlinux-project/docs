@@ -1,0 +1,93 @@
+---
+title: Rychlý start
+description: Nabootujte live obraz UFLinux, připojte se k síti a vyzkoušejte pracovní prostředí před instalací.
+sidebar:
+  order: 2
+source: README.md
+---
+
+import UpstreamSource from '../../../components/UpstreamSource.astro';
+
+Tato stránka vás dovede od staženého ISO k běžícímu pracovnímu prostředí. Pokud chcete jen
+UFLinux vyzkoušet, stačí dojít k [Prohlídka live relace](#prohlídka-live-relace) — na disk se
+nic nezapíše, dokud nespustíte instalátor.
+
+## 1. Stažení a ověření
+
+Stáhněte ISO pro svůj stroj z [posledního vydání](https://github.com/UFlinux-project/uflinux3/releases)
+spolu se souborem `SHA256SUMS` a zkontrolujte ho:
+
+```sh
+sha256sum -c SHA256SUMS
+```
+
+Máte-li [`gh` CLI](https://cli.github.com/), můžete ověřit i atestaci sestavení:
+
+```sh
+gh attestation verify uflinux-0.1.0-x86_64.iso --repo UFlinux-project/uflinux3
+```
+
+Úplný seznam souborů najdete na stránce [Stahování a ověření](./reference/releases.md).
+
+Většina stolních počítačů chce ISO **x86_64**. Je to jediný obraz, který byl otestován při
+startu, a to na legacy BIOS i UEFI.
+
+## 2. Nabootujte live obraz
+
+Zapište ISO na USB:
+
+```sh
+doas dd if=uflinux-0.1.0-x86_64.iso of=/dev/sdX bs=4M oflag=sync status=progress
+```
+
+Nabootujte z něj. Live prostředí se spustí samo a přihlásí vás jako `live`. Na sériové konzoli
+použijte **live / live**.
+
+Live relace běží celá z média a k přístupu k ploše nepotřebuje síť. Dvě věci si zapamatujte:
+
+- Účet `live` může spouštět `doas` **bez hesla**. Účet root je zamčený.
+- SSH není zapnuté, takže stroj není z defaultu dostupný ze sítě.
+
+Live obraz načítá kořenový systém do RAM a obsahuje i plnou kolekci `linux-firmware` od
+Alpine, takže potřebuje výrazně více paměti než nainstalovaný systém. Počítejte nejméně s
+4 GiB.
+
+## 3. Připojte se k síti
+
+Síť má na starosti **ConnMan** s **iwd** jako backendem Wi-Fi. Není tam `wpa_supplicant`,
+žádný NetworkManager ani `ntpd`/`chronyd` — hodiny drží SNTP klient ConnManu.
+
+Klikněte na panelu na **Síť**, nebo otevřete **Nastavení → Síť**, vyberte svůj access point a
+zadejte heslo. Z konzole funguje obvyklé `connmanctl`.
+
+## 4. Prohlídka live relace
+
+Panel obsahuje spouštěč, hlavní lištu, systémový tray a samostatné nabídky Síť, Zvuk a
+Napájení. Základ:
+
+| Klávesy | Akce |
+| --- | --- |
+| `Super` | Otevřít nabídku Start |
+| `Super` + `Space` | Spouštěč aplikací |
+| `Super` + `Enter` | Terminál (Foot) |
+| `Super` + `E` | Soubory (Nemo) |
+| `Super` + `I` | Nastavení |
+| `Super` + `D` | Zobrazit plochu |
+| `Print Screen` | Nástroj na snímky a záznam obrazovky |
+
+Nainstalované aplikace zahrnují Foot, Nemo, Firefox s uBlock Origin, Celluloid, Transmission,
+GNOME Disks a File Roller. Podrobnosti jsou v [Přehledu pracovního prostředí](./desktop/overview.md)
+a všechny vazby v [Klávesových zkratkách](./reference/keyboard-shortcuts.md).
+
+## 5. Instalace, až budete připraveni
+
+Grafický instalátor se v live relaci otevírá sám; spustit ho můžete i jako **Instalovat
+UFLinux** z nabídky aplikací.
+
+Než to uděláte, zkontrolujte si plán rozdělení disku. UFLinux v režimu „připraveno" **nikdy
+neparticionuje ani nformátuje** a vedený režim smaže celý disk. Kořen nainstalovaného systému
+musí být **XFS** s samostatným `/boot`.
+
+Oba režimy i příkazový instalátor popisuje stránka [Instalace](./installing.md).
+
+<UpstreamSource path="README.md" />

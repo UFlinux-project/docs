@@ -1,0 +1,89 @@
+---
+title: Frequently asked questions
+description: Short answers about Alpine base, networking, systemd, Secure Boot, memory and release status.
+source: README.md
+---
+
+import UpstreamSource from '../../../components/UpstreamSource.astro';
+
+## Is UFLinux a fork of Alpine?
+
+No. UFLinux pins an Alpine stable release, builds a set of custom packages on top of it, and
+assembles them into images. Alpine's official `main` and `community` repositories stay
+enabled, so ordinary Alpine packages work as usual.
+
+## Is this released?
+
+Pre-release. The baseline is version `0.1.0` on Alpine 3.24. Only the x86_64 ISO has been
+boot-tested; device images are a preview. Read
+[Downloads and verification](./releases.md) before relying on it.
+
+## Why XFS only?
+
+The installed root must be XFS with a separate `/boot`. It is a deliberate single choice:
+one filesystem means one initramfs configuration, one set of resize and recovery behaviours,
+and one thing the project has actually tested. The installer never partitions or formats in
+"prepared" mode, so the filesystem is fixed rather than negotiated.
+[Installation](../installing.md) covers the layout.
+
+## Why no NetworkManager?
+
+Networking is ConnMan with iwd. It is small, it starts fast, and it covers personal and
+enterprise Wi-Fi plus Ethernet, DHCP, IPv4/IPv6, DNS and proxies. The cost is scope: no
+VPN, hotspot, tethering, modem or Bluetooth networking in the Settings UI. Do not enable
+`networking`, `dhcpcd` or another resolver alongside it.
+
+## Where is `ntpd`?
+
+ConnMan's built-in SNTP client is the only time synchronizer — no `ntpd`, `chronyd` or
+`openntpd`. It slews small offsets and steps large ones through `adjtimex()`, and Settings
+reports the kernel's actual synchronization state rather than whether a lookup succeeded.
+
+## Does UFLinux use systemd?
+
+No. It is OpenRC, as Alpine is. Boot services run in parallel where dependencies allow; set
+`rc_parallel="NO"` in `/etc/rc.conf.d/uflinux.conf` when diagnosing a boot problem.
+elogind provides session actions and backlight control.
+
+## What about Secure Boot?
+
+Not supported. UEFI images boot with Secure Boot **disabled**, and no UEFI signature is
+enrolled. APK and modloop signatures are separate mechanisms and are unaffected.
+
+## How much memory do I need?
+
+An installed system is developed and accepted at **512 MiB with one display and no swap**. A
+live image needs at least 4 GiB, because it unpacks the desktop and the full icon theme into
+a tmpfs root. See [Validation record](../developer/validation.md) for measured figures.
+
+## Is GNOME or KDE required?
+
+Neither. The session is labwc, Ironbar, and UFLinux's own GTK4 applications. Nothing pulls
+in a desktop environment. Settings deliberately avoids libadwaita.
+
+## Can I use my own panel configuration?
+
+Yes — put a file in the right place and it replaces the packaged default rather than
+extending it. Personal compositor config goes in `~/.config/labwc/`, UFLinux preferences in
+`~/.config/uflinux/`. Package upgrades preserve both.
+
+## Why is the root account locked?
+
+`doas` replaces `sudo`, and the root account is locked so administration goes through a
+named user. On the live image, `live` has passwordless `doas`. On an installed system, the
+user you create has password-authenticated `doas`. Some Settings operations go through a
+polkit-authenticated helper instead, using your own password.
+
+## Is Bluetooth supported?
+
+Not in the default bundle, and not in the Settings UI. The Bluetooth plugin is disabled in
+the ConnMan build.
+
+## How do I report a problem?
+
+Use the [issue tracker of the documentation repo](https://github.com/UFlinux-project/docs/issues)
+for anything wrong or missing on these pages, and
+[`UFlinux-project/uflinux3`](https://github.com/UFlinux-project/uflinux3) for the
+distribution itself. See [Contributing](../developer/contributing.md).
+
+<UpstreamSource path="README.md" />

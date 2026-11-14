@@ -1,0 +1,172 @@
+---
+title: Validation record
+description: What has actually been tested, with the measured numbers — and what has not.
+source: docs/validation.md
+---
+
+import UpstreamSource from '../../../components/UpstreamSource.astro';
+
+This page is the honest answer to "how well does this work?". Everything below is a local
+x86_64 development result unless stated otherwise. Nothing here is a claim about your
+hardware.
+
+## What is covered
+
+| Area | Status |
+| --- | --- |
+| x86_64 ISO, BIOS and UEFI | Booted, installed to XFS, rebooted — on every commit, PR, tag and full-matrix run |
+| Other six architectures | Built and published; **no VM is started** |
+| Device images | Built on tags; **no boot test configured** |
+| Physical GPU, Wi-Fi, suspend, multi-display, Bluetooth | Not certified; needs separate hardware tests |
+| Byte-identical whole-ISO rebuild | Not established |
+
+Publication requires green build reports for all seven architectures and green boot reports
+for both x86_64 firmware modes. A configured test is not evidence of a successful run — check
+the workflow results and attached build records.
+
+## Measured on the installed reference target
+
+The reference target is an installed x86_64 system with **512 MiB of RAM, one display and no
+swap**. Both firmware paths passed ISO boot, XFS installation, installed-system reboot,
+partition-table preservation, and a complete hash check of an unrelated partition. Root
+remained locked and the installed account used its new password. Neither run reported OOM.
+
+| Firmware | Live serial login | Background components PSS | Flyout PSS | Full UI PSS |
+| --- | ---: | ---: | ---: | ---: |
+| BIOS | 44.13 s | 6.29 MiB | 31.22 MiB | 34.77 MiB |
+| UEFI | 54.29 s | 6.05 MiB | 31.34 MiB | 34.78 MiB |
+
+These are QEMU software-rendering measurements. Background figures include the session service
+and the temporarily active privileged helper, not the entire desktop. Live boot timing uses a
+separate 2 GiB live-image test, not the installed 512 MiB test.
+
+Native headless measurements: session service 5.72 MiB PSS, Settings UI 36.77 MiB, flyout
+alone 31.24 MiB. A two-second idle sample recorded 0% CPU for the service and GUI. First
+usable frames were 36 ms for the full UI and 36 ms for a new flyout process; a warm flyout
+activation in the existing GUI took 6 ms. These are local process-launch measurements with
+build caches retained, not a disk-cache-cold hardware benchmark.
+
+Budgets are ≤16 MiB PSS for background Settings components, ≤80 MiB for the full UI and ≤64 MiB
+for the flyout, with a cold usable frame target of 1.5 s and warm 500 ms. Those are native
+reference targets, not emulated timing guarantees.
+
+Stripped executables: `uflinux-settings` 989,176 B, `uflinux-settingsctl` 735,328 B,
+`uflinux-settingsd` 1,370,184 B, `uflinux-settings-system` 775,912 B, Ironbar 6,703,128 B.
+
+## What the tests actually exercise
+
+- Real headless labwc output management: test and apply, exact modes, last-display rejection,
+  the 15-second deadline, caller-loss rollback, fractional scaling, rotation, hotplug and
+  saved-layout fallback.
+- PipeWire subscriptions over outputs, defaults, volume, mute, recording and playback streams,
+  and reconnection after a `pipewire-pulse` restart.
+- A controlled ConnMan D-Bus fixture for credentials, cancellation, network power, addressing,
+  DNS, proxies and forgetting — this does **not** certify wireless association.
+- Real `mac80211_hwsim` and hostapd tests for WPA2 personal, WPA3 SAE, hidden networks,
+  PEAP/MSCHAPv2, TTLS/PAP and EAP-TLS, with DHCP, reconnect and forgetting, plus route
+  restoration, unrelated-route preservation and server-domain mismatch rejection.
+- ConnMan's SNTP client against a controlled server, as sole synchronizer, reporting the actual
+  kernel state.
+- The real BusyBox `acpid` input parser in a private chroot: only power-key presses invoke the
+  hook; release, repeat and unrelated events are ignored. The installed VM verifies real TLP
+  transitions and physical-key Do nothing and Shut down behaviour.
+- Signing: resigning preserved payloads; damaged archives and mismatched keys were rejected;
+  temporary private keys were removed on success and failure.
+- Repeat build: all custom APK control and data payloads matched after a fresh compiler rebuild,
+  signatures excluded.
+- Configuration preservation: modified system defaults survived package reinstallation, and a
+  simulated prior defaults generation upgraded without replacing local edits. That is a
+  simulated previous generation, not a previously published UFLinux release.
+
+Test-only hostapd and dnsmasq packages are not desktop dependencies, and the installed test's
+Python interpreter is a harness dependency, not an installed-desktop dependency. Missing test
+facilities fail the gate rather than silently claiming coverage.
+
+## Live image memory
+
+The live root unpacks the desktop and the full Papirus icon theme into tmpfs, whose default
+capacity is half of RAM. The current Papirus, artwork and theme package set uses about 993 MiB
+in the live root. A 2 GiB live guest exhausted its root filesystem during boot, so live tests
+now allocate 4 GiB — 3 GiB for armv7's QEMU highmem restriction. The runner rejects boot-time
+APK database and kernel memory failures explicitly and logs byte and inode capacity.
+
+## The unified desktop prototype
+
+A unified desktop is packaged separately for isolated testing; the default session still uses
+Ironbar until the replacement's functionality and release gates pass. Do not run the prototype
+beside the normal panel — both provide panel and tray services.
+
+Its memory work passed the memory and idle-CPU checks with three sessions per implementation:
+median process-set proportional size fell from 86.8 to 73.5 MiB once settled and from 89.2 to
+75.9 MiB after one pass through all four menus, both a 15% reduction against a 10% requirement.
+No replacement session retained more than 0.4 MiB across 100 cycles, none grew its descriptor
+count, and desktop idle CPU peaked at 0.067%.
+
+Those figures come from one headless-pixman environment on one kernel and are **not** a release
+approval. The collector does not measure interactive frame latency, widget or D-Bus subscription
+growth, real audio devices, multi-architecture builds, or an installed low-memory VM.
+
+## Still open
+
+Physical Wi-Fi devices, GPU acceleration, HDR, VRR, DDC/CI, laptop backlights, battery
+transitions and suspend/resume need separate hardware tests — see
+[Physical hardware validation](#physical-hardware-validation). Generic architecture boot
+support does not imply those features work on every board. Other CPU architectures and
+public-repository upgrades remain unverified locally. Clean-build comparisons cover unsigned
+APK control and data payloads, not byte-identical whole ISOs or signing streams.
+
+## Physical hardware validation
+
+QEMU and headless tests establish software behaviour. They cannot establish panel HDR or VRR
+activation, I2C reliability, laptop firmware behaviour, or physical resume. The procedure is to
+run, from an installed UFLinux desktop on each reference device:
+
+- **Graphics** — check the renderer in Displays and About, the actual GPU and driver, normal
+  launch and logout, supported Vulkan and OpenGL plus the software fallback. A configured
+  renderer is not evidence of hardware acceleration.
+- **Displays** — apply exact advertised refresh modes, scaling, rotation and arrangement; leave
+  a change unconfirmed to check the 15-second rollback; unplug and reconnect to confirm a usable
+  display recovers and the saved layout returns.
+- **VRR** — verify with the panel's refresh indicator or a moving test pattern. Protocol support
+  alone is not a physical VRR pass.
+- **HDR** — use labwc's global HDR option with compatible hardware Vulkan and record an
+  observation. The app does not claim to report per-monitor activation.
+- **Brightness** — test the internal backlight in Settings and the flyout, then with a hardware
+  key; test monitor-specific DDC/CI, disconnect during a request and reconnect. Physical
+  monitor-button changes need a rescan.
+- **Power** — switch all three TLP modes and reboot to check the selected default; test charger
+  transitions and each physical power-button action on AC and battery; check inhibitors,
+  suspend, resume, and networking and audio after resume.
+
+Record results as JSON with optional keys `hardware_gpu`, `vrr`, `hdr`, `ddc_ci`, `backlight`,
+`battery`, `suspend_resume`, each with a `status` of `pass`, `fail`, `unavailable` or
+`unverified` plus `notes` identifying device, method and observation. Then run:
+
+```sh
+python3 scripts/hardware-record.py --results results.json
+```
+
+The recorder reads state and metadata; it does not change hardware settings or include Wi-Fi
+credentials. Its report distinguishes observed configuration from operator-supplied evidence
+and rejects physical passes on known QEMU or VM hardware.
+
+Device image targets have no hardware evidence yet. When one is tested, record at least that
+the board boots from the image as written without re-partitioning, that the root partition grew
+to the media on first boot, the serial console and getty behaviour, the renderer reported by the
+desktop, and whether the display works at all. The SpacemiT K1 image is expected to have no
+display output with the current mainline device tree.
+
+## Historical artifacts
+
+The initial development build was checked on 8 November 2026: 24 repository tests, 30 Ironbar
+upstream tests with the selected features, ShellCheck and actionlint, a successful abuild of the
+runtime, debug, documentation and distro subpackages, a schema-valid SPDX 2.3 inventory, and a
+fresh runtime root check. That ISO was 918,552,576 bytes with SHA-256
+`7b1e22f21357e560c513aa07937662db60de0c9803f9cedc1f6e6369cd382992`, and used a **development
+signing key** and an example update URL.
+
+Later development ISOs — with Settings, then artwork, then the splash — are recorded upstream
+with their own hashes and sizes. Each describes its own artifact; historical ISO checksums in
+those documents are not measurements of the current build.
+
+<UpstreamSource path="docs/validation.md" />

@@ -1,0 +1,74 @@
+---
+title: Architectures and boot
+description: Which CPU architectures UFLinux builds ISOs for, and how much of that is actually boot-tested.
+source: docs/architectures.md
+---
+
+import UpstreamSource from '../../../components/UpstreamSource.astro';
+
+UFLinux builds packages and ISO images for seven Alpine architectures. The important caveat
+is up front: **only the x86_64 ISO is boot-tested.** The other six are built and published,
+but no virtual machine is ever started with them.
+
+## ISO matrix
+
+| Alpine architecture | Package build | Boot tests |
+| --- | --- | --- |
+| x86 | native compatibility mode | none |
+| x86_64 | native (q35 machine) | **BIOS and UEFI** |
+| aarch64 | native ARM64 runner | none |
+| armv7 | ARM64 runner, qemu-arm | none |
+| ppc64le | qemu-ppc64le | none |
+| s390x | qemu-s390x | none |
+| riscv64 | qemu-riscv64 | none |
+
+`armhf` is not among them. x86 uses the x86_64 kernel's 32-bit compatibility support, and
+armv7 is emulated on ARM64 runners because AArch32 support is optional in ARM64 kernels.
+
+The x86_64 boot test runs on every commit, pull request, tag and full-matrix run. A release
+requires green build reports for all seven rows and green boot reports for both x86_64
+firmware modes.
+
+## Device image targets
+
+| Board id | Package build | Boot firmware | Status |
+| --- | --- | --- | --- |
+| `rpi` | native ARM64 runner | VideoCore firmware with `config.txt` | supported |
+| `vm` | native x86_64 and ARM64 runners | UEFI with `systemd-boot` | supported |
+| `qcs6490` | native ARM64 runner | board UEFI plus `systemd-boot` | experimental |
+| `spacemit-k1` | qemu-riscv64 | U-Boot distro boot with `extlinux` | experimental |
+
+Device images are supplementary: built on tags and attached to the release, but not part of
+the publication gate, and none has a configured boot test. See
+[Device images](../devices/index.md).
+
+## What "supported architecture" does not mean
+
+This matrix describes the configured build and test setup, not physical hardware
+certification.
+
+- An architecture name does not guarantee an ISO can boot every board using that CPU.
+  Generic ARM ISOs need appropriate firmware and do not replace Alpine's board-specific
+  Raspberry Pi tarballs.
+- Mainframes commonly lack a local display. UFLinux provides a serial console, and the
+  desktop can be tested with a headless Wayland backend. No remote-desktop service is
+  enabled by default.
+- UEFI tests run with Secure Boot **disabled**. These images do not provide enrolled UEFI
+  Secure Boot signatures; APK and modloop signatures are separate mechanisms.
+- The graphical stack uses packaged Mesa and Alpine kernels and firmware. Physical GPU,
+  Wi-Fi, suspend, multiple displays, Bluetooth and proprietary drivers all need separate
+  hardware testing. Bluetooth is not in the default bundle.
+
+## What every target does get checked
+
+Every target runs Ironbar's upstream tests during compilation. Verification then checks the
+actual Ironbar configuration, a headless labwc compositor, foreign-toplevel protocol
+availability, terminal mapping, minimising and focusing, panel survival, screenshot creation
+and memory reporting. Missing physical battery, network or audio hardware is not presented
+as physical-device testing.
+
+The x86_64 VM tests exercise real OpenRC boot, networking for package access, installer
+validation, XFS mounting, user and password setup, preservation of an unrelated partition,
+and installed boot.
+
+<UpstreamSource path="docs/architectures.md" />

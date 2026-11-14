@@ -1,0 +1,53 @@
+/* UFLinux brand: leaf green over Starlight's defaults. */
+:root {
+	--sl-color-accent-low: #cfe6d8;
+	--sl-color-accent: #2f8a5b;
+	--sl-color-accent-high: #1f6f4a;
+	--sl-font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+}
+
+:root[data-theme='dark'],
+:root[data-theme='light'] {
+	--sl-color-accent-low: #14402c;
+	--sl-color-accent: #4fae7c;
+	--sl-color-accent-high: #a8d8bd;
+}
+
+/* Keep long package names and paths from stretching the content column. */
+.sl-markdown-content code {
+	overflow-wrap: anywhere;
+}
+
+.sl-markdown-content table {
+	display: block;
+	overflow-x: auto;
+}
+
+.sl-markdown-content table th {
+	white-space: nowrap;
+}
+
+/* Status badges rendered from the `status` frontmatter field. */
+.uflinux-status {
+	display: inline-block;
+	margin: 0 0 1rem;
+	padding: 0.15rem 0.6rem;
+	border-radius: 999px;
+	font-size: var(--sl-text-xs);
+	font-weight: 600;
+	letter-spacing: 0.02em;
+	text-transform: uppercase;
+	border: 1px solid var(--sl-color-hairline);
+	color: var(--sl-color-accent-high);
+	background: var(--sl-color-accent-low);
+}
+
+.uflinux-status[data-status='Experimental'] {
+	color: var(--sl-color-orange-high);
+	background: var(--sl-color-orange-low);
+}
+
+.uflinux-status[data-status='Draft'] {
+	color: var(--sl-color-gray-2);
+	background: var(--sl-color-gray-6);
+}

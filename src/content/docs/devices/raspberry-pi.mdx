@@ -1,0 +1,61 @@
+---
+title: Raspberry Pi 3–5
+description: Running the UFLinux device image on Raspberry Pi 3, 4 and 5.
+status: Supported
+source: docs/device-images.md
+---
+
+import UpstreamSource from '../../../components/UpstreamSource.astro';
+
+The `rpi` image is the most conventional of the UFLinux device images: an aarch64 system on
+Alpine's `linux-rpi` kernel, booted by the board's own VideoCore firmware.
+
+## What it is
+
+| | |
+| --- | --- |
+| Board id | `rpi` |
+| Models | Raspberry Pi 3, 4 and 5 |
+| Architecture | aarch64 |
+| Kernel | Alpine `linux-rpi` |
+| Boot | VideoCore firmware with `config.txt` |
+| Root filesystem | f2fs, label `UFLINUX_ROOT` |
+| Status | Supported |
+
+"Supported" here means the target is part of the regular build and is not marked
+experimental in the release matrix. It does **not** mean the image has been booted on a
+physical Pi — see [Device images](./index.md#how-solid-is-this).
+
+## Boot files
+
+The ESP carries the Raspberry Pi boot scheme rather than an EFI loader: `config.txt`,
+`cmdline.txt`, `usercfg.txt`, the VideoCore firmware, and the device-tree overlays, all
+unpacked from the bootloader packages. The kernel is at `boot/vmlinuz` and the initramfs at
+`boot/initramfs`.
+
+## Writing it
+
+```sh
+zstd -d < uflinux-0.1.0-rpi-aarch64.img.zst | sudo dd of=/dev/sdX bs=8M oflag=direct status=progress
+sync
+```
+
+Any card larger than 6144 MiB works; the root partition grows to fill the rest on first
+boot. Log in as `root` with a blank password, set `passwd`, and add yourself to
+`wheel,audio,video,netdev,input`.
+
+Full details — layout, first login, the resize service, and updates — are on
+[Device images](./index.md).
+
+## Notes for Pi users
+
+- The image is aarch64 only. A Raspberry Pi 3 in 32-bit mode wants a different image.
+- f2fs is used deliberately for SD-card wear levelling. The resized space appears in `df`
+  after a second reboot.
+- The desktop expects a local display; the serial console is configured at 115200 8n1 on
+  the board's default UART.
+- Physical GPU, HDMI, audio and Wi-Fi behaviour on a Pi has not been certified. Alpine's
+  board-specific Raspberry Pi tarballs remain the better-tested option if you need
+  guaranteed hardware support.
+
+<UpstreamSource path="docs/device-images.md" />

@@ -1,0 +1,78 @@
+---
+title: Obrazy pro zařízení
+description: Diskové obrazy UFLinux pro Raspberry Pi, desky Qualcomm a SpacemiT K1 a pro virtuální stroje.
+status: Experimental
+sidebar:
+  order: 1
+source: docs/device-images.md
+---
+
+import UpstreamSource from '../../../../components/UpstreamSource.astro';
+
+Kromě ISO pro počítače vydává UFLinux i **diskové obrazy `.img.xz`** pro konkrétní desky a pro
+virtuální stroje. Narozdíl od ISO se rovnou zapisují na celý disk a systém na nich už je
+nainstalovaný — instalátor nespouštíte.
+
+Obrazy pro zařízení jsou **doplňkové**. Vydání se řídí obrazy ISO; obraz pro desku, který se
+nepodařilo sestavit, vydání nezdrží.
+
+## Dostupné obrazy
+
+| Zařízení | Cílová architektura | Obraz | Základ |
+| --- | --- | --- | --- |
+| Raspberry Pi 4 / 400, Pi 5 | `aarch64` | `uflinux-<verze>-raspberrypi-aarch64.img.xz` | `alpine-base-raspberrypi` |
+| Qualcomm Robotics RB5, RB3 Gen 2 | `aarch64` | `uflinux-<verze>-qcs6490-aarch64.img.xz` | `alpine-base-qcs6490` |
+| SpacemiT K1 | `riscv64` | `uflinux-<verze>-spacemit-k1-riscv64.img.xz` | `alpine-base-spacemit-k1` |
+| QEMU / virt | `x86_64`, `aarch64` | `uflinux-<verze>-vm-<arch>.img.xz` | `alpine-base-vm` |
+
+Stav podpory jednotlivých zařízení je na jejich stránkách:
+[Raspberry Pi](./raspberry-pi.md), [Qualcomm RB5 a RB3 Gen 2](./qcs6490.md),
+[SpacemiT K1](./spacemit-k1.md), [Virtuální stroje](./vm.md).
+
+## Společná struktura
+
+Každý obraz má GPT rozdělení:
+
+1. **Výrobní oddíl** — formátovaný při prvním startu, nese `uflinux-release` a výchozí
+   konfiguraci.
+2. **Zaváděcí oddíl** — FAT32 (nebo ext4 tam, kde to platforma vyžaduje).
+3. **Kořen XFS** — při prvním startu se roztáhne na celý zbývající prostor.
+
+Při prvním startu se vytvoří výchozí konfigurace, roztáhne se kořen a zapne se `getty` na
+přenosném rozhraní desky.
+
+## Zápis obrazu
+
+```sh
+xz -dc uflinux-0.1.0-raspberrypi-aarch64.img.xz | doas dd of=/dev/sdX bs=4M oflag=sync status=progress
+```
+
+Zápis maže všechno na cílovém zařízení. U Raspberry Pi se zapisuje na kartu, u Qualcomm desek
+do úložiště v režimu flash — detaily jsou na stránkách zařízení.
+
+## První přihlášení
+
+Přihlašovací údaje jsou `live` s prázdným heslem. Účet root je zamčený a `live` může spouštět
+`doas` bez hesla. Po prvním startu si založte vlastní účet.
+
+## Co je při startu jinak
+
+- **Žádný instalátor.** Systém je nainstalovaný; po nastavení sítě si založte účet a nastavte
+  heslo.
+- **Kořen se roztáhne jednou.** Služba `uflinux-device` oddíl prodlouží při prvním startu a
+  pak se sama zakáže.
+- **Přenosná konzole.** Getty je zapnuté na rozhraní, které deska používá — u Pi `tty1`, u
+  Qualcomm a SpacemiT desek sériová konzole.
+
+## Poznámka k Nura
+
+Výchozí konfigurace pro RB5 a RB3 Gen 2 předpokládá, že na zaváděcím oddíle je soubor `nura`
+od `nura-firmware-qcom`. Pokud tam není, obraz nabootuje do režimu pro zotavení.
+
+## Jak číst stav zařízení
+
+O zařízeních se píše, že jsou „připravená pro vydání". To znamená, že se **sestavují a
+archivují** v CI. Není to tvrzení, že byla ověřena na konkrétním kusu hardwaru — to zatím
+prověřeno nebylo. Viz [Ověření na fyzickém hardwaru](../developer/validation.md).
+
+<UpstreamSource path="docs/device-images.md" />

@@ -1,0 +1,28 @@
+---
+/**
+ * Starlight PageTitle override: renders the optional `status` frontmatter field as a badge
+ * above the heading. PAGE_TITLE_ID is inlined because Starlight does not export its constants
+ * subpath; keep this id in sync with Starlight's `src/constants.ts`.
+ */
+import type { StarlightRouteData } from '@astrojs/starlight/route-data';
+
+const PAGE_TITLE_ID = '_top';
+
+const { entry } = Astro.locals.starlightRoute as StarlightRouteData;
+const status = (entry.data as { status?: string }).status;
+---
+
+{status && <span class="uflinux-status" data-status={status}>{status}</span>}
+<h1 id={PAGE_TITLE_ID}>{entry.data.title}</h1>
+
+<style>
+	@layer starlight.core {
+		h1 {
+			margin-top: 1rem;
+			font-size: var(--sl-text-h1);
+			line-height: var(--sl-line-height-headings);
+			font-weight: 600;
+			color: var(--sl-color-white);
+		}
+	}
+</style>

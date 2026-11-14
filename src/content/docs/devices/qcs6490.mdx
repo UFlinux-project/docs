@@ -1,0 +1,65 @@
+---
+title: Dragon Q6A-class boards
+description: The experimental qcs6490 image for Arrow Dragon Q6A and similar QCS6490 boards.
+status: Experimental
+source: docs/device-images.md
+---
+
+import UpstreamSource from '../../../components/UpstreamSource.astro';
+
+The `qcs6490` image targets the Arrow Dragon Q6A and similar QCS6490 boards. It is the one
+UFLinux device image that needs a kernel from another distribution, and the reason it is
+labelled experimental is specific and worth understanding before you flash one.
+
+## What it is
+
+| | |
+| --- | --- |
+| Board id | `qcs6490` |
+| Boards | Arrow Dragon Q6A and similar QCS6490 boards |
+| Architecture | aarch64 |
+| Kernel | Nura `linux-postmarketos-qcom-sc7280` |
+| Boot | Board UEFI + `systemd-boot` |
+| Root filesystem | f2fs, label `UFLINUX_ROOT` |
+| Status | Experimental |
+
+## Why the kernel is not Alpine's
+
+Some QCS6490 boards have no firmware-provided device tree, and Alpine's `linux-lts` is
+neither configured nor patched for the platform's display — so HDMI stays black. That was
+observed on real hardware: the board's firmware reached `systemd-boot` and the entry
+loaded, but nothing appeared on the screen.
+
+The image therefore runs the mainline kernel from **Nura**, the postmarketOS distribution.
+It ships the Qualcomm drivers built in, the board device trees under `/boot/dtbs`, and a
+`linux.efi` zboot image that `systemd-boot` loads directly.
+
+Nura's `dtbloader` EFI driver is also carried in `EFI/systemd/drivers`. It installs a board
+device tree before `systemd-boot` runs, which covers boards whose firmware provides none.
+
+## What Nura is — and is not — used for
+
+Nura is used **only** as an extra aarch64 package source, pinned to a specific branch and
+index hash, and only for that kernel and driver. Bootloaders and every other driver come
+from Alpine, and no Nura `device-*` package is ever installed.
+
+Both packages are *fetched and unpacked* rather than installed. Nura ships its own
+`mkinitfs` replacement that conflicts with Alpine's, and apk solves against everything in
+`/etc/apk/repositories` — with both visible, apk refuses to select any package set that
+pulls in a kernel. So the files are unpacked at their package paths and become ordinary
+rootfs content, with no Nura entry in the installed database.
+
+Two consequences you should know about:
+
+- Because the kernel is unpacked, no `update-kernel` hook runs. The image profile assembles
+  the boot files by hand and generates the initramfs with Alpine's `mkinitfs` against the
+  unpacked `/lib/modules` tree.
+- Unpacked packages get no triggers and **cannot be upgraded with `apk`**. To move the
+  kernel forward, flash a newer image.
+
+## Writing it
+
+Same procedure as every other device image — see [Device images](./index.md#writing-an-image).
+Log in as `root` with a blank password over HDMI on `tty1` or the `ttyMSM0` serial console.
+
+<UpstreamSource path="docs/device-images.md" />

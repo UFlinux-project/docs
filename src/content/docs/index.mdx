@@ -1,0 +1,77 @@
+---
+title: What is UFLinux?
+description: UFLinux is an independent, lightweight Linux distribution built on Alpine Linux with its own Wayland desktop.
+sidebar:
+  order: 1
+source: README.md
+---
+
+import UpstreamSource from '../../components/UpstreamSource.astro';
+
+UFLinux is an independent Linux distribution built on top of **Alpine Linux**. It
+combines Alpine's small, security-minded base with a desktop of UFLinux's own: a
+Wayland session, a custom Settings application, a custom Start menu, and an
+installer that stays out of your partition table.
+
+The project is currently in **pre-release**. The baseline is version `0.1.0`, built
+against Alpine Linux 3.24. Everything here describes what that baseline does today.
+
+## What you get
+
+- **A Wayland desktop** on the [labwc](https://labwc.github.io/) compositor with the
+  [Ironbar](https://github.com/JakeStanger/ironbar) panel, configured for UFLinux and
+  shipped with a matching dark theme.
+- **UFLinux Settings**, a GTK4 application covering network, sound, power, displays,
+  Bluetooth, wallpaper and About, with a quick-settings flyout on the panel.
+- **A resident Start menu** in its own process, with a launcher, favourites and a
+  recent-apps list.
+- **Alpine packages** from the matching stable `main` and `community` branches, plus a
+  signed UFLinux repository with the custom packages.
+- **Seven CPU architectures** of ISO images, and separate disk images for a few boards.
+- **Small footprint.** The installed desktop is measured and accepted at 512 MiB of
+  RAM with one display and no swap.
+
+## How it differs from plain Alpine
+
+Alpine gives you a base system and lets you assemble a desktop yourself. UFLinux makes
+those choices for you and maintains the result:
+
+| | Alpine | UFLinux |
+| --- | --- | --- |
+| Networking | `wpa_supplicant` or NetworkManager | ConnMan + iwd, managed from Settings |
+| Privilege escalation | `sudo` | `doas`, root account locked |
+| Display manager | your choice | ReGreet, adw-gtk3 dark, no session picker |
+| Panel and session | your choice | Ironbar + labwc with UFLinux configuration |
+| Settings UI | `setup-alpine` prompts | UFLinux Settings and a session service |
+| Power management | your choice | TLP with three profiles and a power-button policy |
+| Time sync | `ntpd` / `chronyd` | ConnMan's SNTP client only |
+
+None of this is a fork of Alpine. UFLinux builds a set of custom packages on top of a
+pinned Alpine release and assembles them into images.
+
+## Who it is for
+
+UFLinux targets people who want a lightweight, Wayland-first desktop and are comfortable
+with Alpine's package manager and release model. It is not yet a "download and forget"
+distribution: only one of its seven architectures has been boot-tested, and device
+support is thin outside Raspberry Pi.
+
+## Where to go next
+
+- [Quick start](./quick-start.md) — boot a live image and get online in a few minutes.
+- [Installation](./installing.md) — put UFLinux on a disk.
+- [Desktop overview](./desktop/overview.md) — what the session is made of.
+- [Device images](./devices/index.md) — Raspberry Pi, Qualcomm and RISC-V boards.
+- [For contributors](./developer/building.md) — how the images are built.
+
+## Licensing and provenance
+
+UFLinux's own code and packages are `GPL-3.0-only`. Third-party packages and patches keep
+their own licenses; the images ship an SPDX inventory that lists what is physically
+bundled.
+
+This documentation site is derived from the developer notes in
+[`UFlinux-project/uflinux3`](https://github.com/UFlinux-project/uflinux3). Pages that
+come from there link back to the exact upstream file at the bottom.
+
+<UpstreamSource path="README.md" />

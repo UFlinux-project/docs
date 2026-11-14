@@ -1,0 +1,94 @@
+---
+title: Desktop overview
+description: What the UFLinux session is made of — labwc, Ironbar, the session service, and the applications that ship.
+source: README.md
+---
+
+import UpstreamSource from '../../../components/UpstreamSource.astro';
+
+The UFLinux desktop is a Wayland session assembled from a small number of components,
+each chosen or written for a specific job. It has no GNOME or KDE dependencies.
+
+## The stack
+
+| Layer | Component |
+| --- | --- |
+| Compositor | [labwc](https://labwc.github.io/) |
+| Panel | [Ironbar](https://github.com/JakeStanger/ironbar), UFLinux configuration |
+| Start menu | `uflinux-desktop`, a resident GTK4 process |
+| Settings UI | `uflinux-settings`, plain GTK4 |
+| Session service | `uflinux-settingsd`, headless GLib/GIO |
+| Privileged helper | `uflinux-settings-system`, root D-Bus + polkit |
+| Greeter | ReGreet with the adw-gtk3 dark theme |
+| Terminal | Foot |
+| File manager | Nemo |
+| Notifications | Mako |
+| Audio | PipeWire and WirePlumber, with `pipewire-pulse` |
+| Networking | ConnMan with iwd |
+| Power | TLP, plus a BusyBox `acpid` power-button hook |
+| Time sync | ConnMan's SNTP client |
+
+Settings and the Start menu are Rust workspaces using plain GTK4 and the user's GTK
+theme. Neither depends on libadwaita, GNOME Settings, or the GNOME settings daemon.
+
+## Session start
+
+OpenRC starts independent services in parallel for both live and installed systems.
+`uflinux-defaults` sets `rc_parallel="YES"` in `/etc/rc.conf.d/uflinux.conf`; service
+dependencies still determine ordering. Set `rc_parallel="NO"` in that file when
+diagnosing a boot problem — the change takes effect on the next boot and survives
+upgrades.
+
+ReGreet starts the UFLinux session directly. There is no session selector. The Start
+menu process starts hidden with its widgets, layout and application catalog already
+prepared, so opening it is fast.
+
+## Renderer selection
+
+The session wrapper probes hardware Vulkan, then hardware OpenGL, then pixman. It skips
+Vulkan on Sandy Bridge, Ivy Bridge and Bay Trail Intel graphics, where Vulkan support is
+incomplete, and it skips software Vulkan entirely. Explicit renderer overrides are
+respected, and startup fallback attempts are limited.
+
+A normal logout — or a crash after the desktop has started — does **not** restart the
+session with a different renderer. On software rendering, GTK uses Cairo unless you
+override it, and the quick-settings cards drop their blurred shadow to reduce
+software-rendering allocations.
+
+## Installed applications
+
+Every architecture except s390x ships:
+
+- **Firefox** with uBlock Origin
+- **Foot** terminal
+- **Nemo** file manager
+- **Celluloid** media player
+- **Transmission** BitTorrent client
+- **GNOME Disks** and **File Roller** for images and archives
+- **gpu-screen-recorder** as the screenshot and screen-recording backend
+
+Bluetooth is not part of the default bundle. There is no remote-desktop service enabled
+by default.
+
+## Memory
+
+The installed desktop is built and accepted against a reference target of **512 MiB of
+RAM, one display, and no swap**. The live image is a different story: it unpacks the
+desktop and the full Papirus icon theme into a tmpfs root whose default capacity is half
+of RAM, so live sessions need at least 4 GiB.
+
+Background components are budgeted at ≤16 MiB PSS, the full Settings UI at ≤80 MiB, and
+the flyout at ≤64 MiB. See [Validation record](./developer/validation.md) for measured
+numbers.
+
+## Panel layout
+
+The taskbar carries the Start button, launcher, window list, tray, and separate
+**Network**, **Sound** and **Power** buttons with symbolic icons that track connection
+state, output volume and battery. Desktop machines show a bolt instead of a battery.
+StatusNotifier icons from background apps sit behind a single chevron so they cannot push
+the clock off a narrow panel.
+
+Details in [Start menu](./start-menu.md) and [UFLinux Settings](./settings.md).
+
+<UpstreamSource path="README.md" />

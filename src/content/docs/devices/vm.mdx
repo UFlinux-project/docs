@@ -1,0 +1,68 @@
+---
+title: Virtual machines
+description: The preinstalled UFLinux disk image for QEMU, KVM and other hypervisors.
+status: Supported
+source: docs/device-images.md
+---
+
+import UpstreamSource from '../../../components/UpstreamSource.astro';
+
+The `vm` image is a preinstalled UFLinux system for hypervisors. Unlike the ISO, it has no
+live session and no installer — you write it, boot it, and log in. It is the quickest way to
+run the desktop in a VM, and the smallest image to test with.
+
+## What it is
+
+| | |
+| --- | --- |
+| Board id | `vm` |
+| Hypervisors | QEMU, KVM and others |
+| Architecture | x86_64 and aarch64 |
+| Kernel | Alpine `linux-virt` |
+| Boot | UEFI + `systemd-boot` |
+| Root filesystem | XFS, label `UFLINUX_ROOT` |
+| Size | 5120 MiB uncompressed |
+
+It uses XFS rather than f2fs because a virtual disk has none of the SD-card constraints that
+f2fs exists to serve — and because it matches the filesystem of an installed ISO system.
+
+## Writing it
+
+The image is a raw GPT disk, so it can be used directly as a disk image:
+
+```sh
+zstd -d uflinux-0.1.0-vm-x86_64.img.zst
+qemu-system-x86_64 \
+  -machine q35 -cpu max -smp 2 -m 2048 \
+  -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE.fd \
+  -drive format=raw,file=uflinux-0.1.0-vm-x86_64.img \
+  -netdev user,id=n0 -device virtio-net-pci,netdev=n0
+```
+
+The root partition grows to fill the virtual disk on first boot, so enlarging the image
+before booting gives you the extra space.
+
+Log in as `root` with a blank password, set `passwd`, and add yourself to
+`wheel,audio,video,netdev,input`. The greeter is enabled, so the new account can then log in
+graphically.
+
+## Memory
+
+The installed desktop is developed and accepted against **512 MiB of RAM, one display and no
+swap**, so a small guest is realistic rather than marginal. Give it more if you want a
+comfortable browser session.
+
+## Secure Boot
+
+UEFI boot works, but these images do not provide enrolled UEFI Secure Boot signatures. Run
+the guest with Secure Boot disabled. APK and modloop signatures are separate mechanisms and
+are unaffected.
+
+## Relationship to the ISO
+
+The `vm` image is built from the same signed packages as the ISOs, but it is a separate
+artifact and is **not** covered by the automated BIOS/UEFI boot tests that gate an ISO
+release. If you want the artifact that CI actually boots, install the x86_64 ISO — see
+[Installation](../installing.md).
+
+<UpstreamSource path="docs/device-images.md" />

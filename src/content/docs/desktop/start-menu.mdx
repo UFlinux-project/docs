@@ -1,0 +1,103 @@
+---
+title: Start menu
+description: The resident UFLinux Start menu — how to open it, what it contains, and how its tray and power controls behave.
+source: docs/start-menu.md
+---
+
+import UpstreamSource from '../../../components/UpstreamSource.astro';
+
+The Start menu runs in the resident GTK4 `uflinux-desktop` process. Login starts it
+hidden with its widgets, layout and application catalog already prepared, and it keeps
+them between openings — so the menu appears immediately, and GTK and the compositor draw
+buffers only when the window is mapped.
+
+## Opening it
+
+Click the leaf on the taskbar, or release either `Super` key. `Super` + `R` and
+`Super` + `Space` also toggle it. It uses Papirus icons and your selected GTK theme.
+
+The Start menu and the Network, Sound and Power menus replace each other, while a full
+Settings window can stay open alongside them.
+
+## Left column
+
+Shortcuts to Files, Terminal, Settings, and your default web browser when one is
+installed. **All Applications** opens the alphabetical catalog.
+
+Search matches application names, generic names, descriptions and keywords, with exact
+name matches ranked first. Hidden desktop entries and entries unavailable in the current
+desktop session are excluded. Applications launch through GIO desktop-entry handling, and
+**search text is never interpreted as a command**.
+
+## Right column
+
+Your account name, Home, your configured XDG folders, Settings and Terminal. Folders that
+are unavailable show an explanation. `xdg-user-dirs` creates the standard folders at login
+and respects existing configuration.
+
+Favorites are fixed. There is no tracking of recent files or recent applications.
+
+## Power actions
+
+Log out, Restart and Shut down ask for confirmation with **Cancel** selected by default.
+Suspend is immediate. Actions elogind reports as unavailable are disabled, and
+authorization errors appear inside the menu. The physical power-button policy lives in
+Settings, not here.
+
+## Keyboard behaviour
+
+Search takes focus when the menu opens. Arrow keys move through applications and `Enter`
+launches the selection. `Escape` works in stages: it cancels a confirmation, then clears
+the search, then returns from All Applications, and finally closes the menu. Clicks
+outside close it immediately. Closing resets search, selection and confirmations, but does
+not destroy the catalog.
+
+## Multiple monitors
+
+```sh
+uflinux-desktop --start-menu --output DP-1
+uflinux-desktop --panel network --output HDMI-1
+```
+
+With no `--output`, labwc chooses the monitor that received the keyboard activation; panel
+buttons always supply their own monitor. The transparent layer captures outside clicks and
+the Start button while leaving other taskbar controls usable. Removing an output closes
+the menu, and the card adapts to smaller outputs and compositor scaling.
+
+Panel menus can be opened directly:
+
+```sh
+uflinux-desktop --panel network|sound|power --output NAME
+```
+
+## Controlling the resident process
+
+| Command | Effect |
+| --- | --- |
+| `uflinux-desktop --daemon` | Start or ensure the hidden resident process |
+| `uflinux-desktop --hide` | Dismiss the menu |
+| `uflinux-desktop --status` | Report readiness and visibility |
+| `uflinux-desktop --quit` | End the process explicitly |
+
+Desktop-file changes refresh the catalog while the menu is hidden. Being resident is part
+of the desktop's background memory cost.
+
+## Tray icons
+
+StatusNotifier icons sit behind a single chevron at the right end of the taskbar, like the
+hidden-icons flyout on Windows, so background apps cannot push the clock off a narrow
+panel. The chevron is hidden while nothing is registered, and its tooltip and accessible
+name report how many icons are behind it.
+
+The flyout is a grid of square icons above the panel, four to eight columns wide depending
+on the output, and scrolls when it grows taller than the flyout allows. Left click
+activates an item, or opens its menu when it declares `ItemIsMenu`. Right click always
+opens the menu. Scrolling over an icon sends its `Scroll` event. Only one tray menu is
+open at a time, and the flyout stays open while one of its menus is up.
+
+## Relationship to Settings
+
+The desktop connects to the Settings state service and provides the session polkit agent.
+Settings shortcuts start `uflinux-settings` as a separate process.
+
+<UpstreamSource path="docs/start-menu.md" />

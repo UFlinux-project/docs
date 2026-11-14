@@ -1,0 +1,28 @@
+{
+	"name": "uflinux-docs",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"description": "Public documentation for the UFLinux project.",
+	"license": "GPL-3.0-only",
+	"scripts": {
+		"dev": "astro dev",
+		"start": "astro dev",
+		"build": "astro build",
+		"preview": "astro preview",
+		"check": "astro check",
+		"astro": "astro"
+	},
+	"dependencies": {
+		"@astrojs/mdx": "^8.1.6",
+		"@astrojs/starlight": "^0.43.1",
+		"astro": "^7.4.12"
+	},
+	"devDependencies": {
+		"@astrojs/check": "^0.9.6",
+		"typescript": "^5.9.3"
+	},
+	"engines": {
+		"node": ">=22.23.4"
+	}
+}

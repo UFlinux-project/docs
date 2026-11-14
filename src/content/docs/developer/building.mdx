@@ -1,0 +1,152 @@
+---
+title: Building
+description: How UFLinux images are built locally, the build stages, and what lands in out/.
+source: docs/building.md
+---
+
+import UpstreamSource from '../../../components/UpstreamSource.astro';
+
+UFLinux builds real Alpine packages and then assembles them into images with Alpine's
+`mkimage`. Everything runs from one entry point, `scripts/build.sh`.
+
+## What you need
+
+A disposable Linux host with Python 3.11+, GNU tar, gzip, coreutils, util-linux, network
+access, root privileges, and at least 10 GiB free — more if you keep several builds around.
+
+Non-native architectures need QEMU user emulation and `binfmt_misc` with the `F` flag. On
+Ubuntu runners:
+
+```sh
+# qeme-user-binfmt binfmt-support
+python3 scripts/preflight.py --arch ppc64le
+```
+
+x86 uses the x86_64 kernel's 32-bit compatibility support. aarch64 and armv7 builds use
+ARM64 runners; armv7 stays emulated there, because AArch32 support is optional in ARM64
+kernels and the runner map treats only an identical host architecture as native.
+
+Run privileged builds on a machine you are willing to destroy. The build chroot exposes
+`proc` and selected device nodes but not host sysfs — it is a build environment, not a
+security boundary for hostile source.
+
+## The basic command
+
+```sh
+export APK_REPOSITORY_URL=https://OWNER.github.io/REPO/apk/v3.24/uflinux
+sudo --preserve-env=APK_REPOSITORY_URL bash scripts/build.sh --arch x86_64
+```
+
+`--stage` accepts `bootstrap`, `packages`, `sign`, `image`, `device`, `verify` or `all`.
+Stages share `--workdir` (default `.state`) and `--outdir` (default `out`); download, APK,
+Cargo and compiler caches use `--cache` (default `.cache/build`). **A lockfile change
+requires a fresh work directory**, though verified downloads can be reused.
+
+With `--device BOARD`, the `device` (or `all`) stage assembles an installed board disk image
+instead of an ISO — see [Device images](../devices/index.md#building-one-locally).
+
+## What the lockfile pins
+
+`config/sources.lock.json` pins minirootfs hashes, aports and Ironbar commit archive hashes,
+feature choices, and the default source epoch. Downloaded files are re-checked on every
+reuse.
+
+Alpine's official repositories remain on the named stable branch so security revisions can be
+picked up. Resolved package versions and hashes are recorded, but a pinned minirootfs does
+**not** freeze those repositories.
+
+## The stages
+
+Twenty-two custom APKs are built: patched ConnMan (runtime, OpenRC, dev, docs, debug),
+Ironbar, the Settings components, and the distribution packages. ConnMan's pinned upstream
+source and Alpine compatibility patches are retained with the build inputs.
+
+| Stage | What it does |
+| --- | --- |
+| `bootstrap` | Prepares the root and toolchain. |
+| `packages` | Root installs recipe dependencies with `SUDO_APK=apk abuild -F deps`; the unprivileged builder runs plain `abuild` — dependency validation, locked Cargo fetch, frozen release build and tests, development signing. Root removes temporary dependencies afterwards, including after a failure. This avoids target setuid helpers, which cannot elevate under QEMU user emulation. |
+| `sign` | Verifies incoming development signatures, replaces only the APK v2 signature stream, signs indexes, and verifies the results. |
+| `image` | Alpine `mkimage` with a custom profile, an APK cache, and a reproducible configuration overlay. See [Boot-image compression](./compression.md). |
+| `device` | With `--device`: installs the board's package set into a separate chroot, configures an installed system, regenerates the initramfs without a modloop, and writes a raw GPT image without loop devices or mounts. The assembled disk is re-read and checked for geometry, identifiers, boot files and initramfs compression before compression. |
+| `verify` | Installs the custom packages through apk, validates Ironbar's actual configuration, tests a headless desktop and toplevel controls, and exercises the installer safeguards. Firmware boot and disk installation are separate VM jobs. |
+
+## Building one package
+
+Use the same entry point, and repeat independently for each origin:
+
+```sh
+sudo --preserve-env=APK_REPOSITORY_URL bash scripts/build.sh --arch x86_64 \
+  --stage packages --package uflinux-settings
+sudo --preserve-env=APK_REPOSITORY_URL python3 scripts/reproducibility.py \
+  --arch x86_64 --version 0.1.0 --package uflinux-settings
+```
+
+`--package` automatically uses `.state/ORIGIN` and `.cache/build/ORIGIN`, writing below
+`out/package-shards/ARCH/ORIGIN`. Shard work and cache directories must stay distinct for
+concurrent builds. Shards support only `packages` and `bootstrap` and never receive release
+keys.
+
+After every origin succeeds, collect the outputs before `sign`, `image` and `verify`:
+
+```sh
+python3 scripts/merge-packages.py --arch x86_64 --version 0.1.0
+```
+
+Collection rejects missing APKs, stale hashes, mixed source commits, differing build
+settings and incomplete native reproducibility proofs. Each native origin must have its
+clean-rebuild report first.
+
+## Outputs
+
+| Directory | Contents |
+| --- | --- |
+| `out/images/ARCH` | ISO and SHA-256/SHA-512 sidecars |
+| `out/devices/ARCH` | Board disk images (`img.zst`) and SHA-256 sidecars |
+| `out/package-shards/ARCH/ORIGIN` | Isolated compile outputs before collection |
+| `out/packages/ARCH` | Build-signed APKs and their public key |
+| `out/repository/ARCH` | Final signed APKs and `APKINDEX` |
+| `out/metadata/ARCH` | Source and build records, hashes, package lists, SPDX inventory |
+| `out/checks/ARCH` | Headless desktop logs, screenshot, memory, validation result |
+| `out/vm/ARCH/MODE` | ISO, install and reboot console logs and result |
+| `out/inputs/ARCH` | Compressed package, source and Cargo inputs for rebuilding |
+
+To preserve an older development ISO, choose a separate `--outdir` and a fresh `--workdir`.
+Do not reuse results after changing inputs.
+
+## Reproducibility
+
+The build sets `SOURCE_DATE_EPOCH`, UTC, stable paths, normalised tar metadata, and gzip
+without timestamps; GitHub uses the source commit time. Ironbar and Settings build with
+`opt-level=3`, fat LTO, eight codegen units, abort-on-panic, and dynamically linked Alpine
+libraries, with no `target-cpu=native` or host instruction-set tuning.
+
+These controls help reproducibility, but **byte-for-byte reproducibility is not claimed**
+until two clean builds with identical resolved packages have been compared. Clean-build
+comparisons cover unsigned APK control and data payloads, not whole ISOs.
+
+To reconstruct an older build, use its source commit and recorded epoch, unpack the input
+caches, and resolve the recorded APK revisions from the saved packages. If mirrors have
+dropped those revisions, create a local signed repository from the retained APKs and use it
+explicitly. The default command resolves current packages from the stable branch — it is not
+an offline replay mode.
+
+## The SPDX inventory
+
+The SPDX file inventories APKs physically bundled in the ISO, including packages available
+for installation but not installed at live boot. It is not a claim that every cached package
+is running. Original APK licence annotations are retained in `licenseComments`;
+`licenseDeclared` and `licenseConcluded` use `NOASSERTION`, because Alpine annotations can
+contain non-SPDX strings and the inventory does not guess how to reinterpret them.
+
+## After editing Settings
+
+```sh
+cargo fmt --manifest-path settings/Cargo.toml --all
+python3 scripts/check.py
+```
+
+Run `python3 scripts/settings-source.py --update` when changing the Settings version. Build
+preparation removes only project-crate compiler artifacts, so normalised source timestamps do
+not stale the Cargo fingerprint and dependency caches survive.
+
+<UpstreamSource path="docs/building.md" />

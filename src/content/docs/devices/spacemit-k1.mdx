@@ -1,0 +1,48 @@
+---
+title: SpacemiT K1 boards
+description: The experimental riscv64 image for SpacemiT K1 boards such as the Orange Pi RV2.
+status: Experimental
+source: docs/device-images.md
+---
+
+import UpstreamSource from '../../../components/UpstreamSource.astro';
+
+The `spacemit-k1` image is UFLinux's only RISC-V device target. It is intended to be driven
+over a serial console or run headless — plan for that before flashing one.
+
+## What it is
+
+| | |
+| --- | --- |
+| Board id | `spacemit-k1` |
+| Boards | SpacemiT K1 family: Orange Pi RV2, Orange Pi R2S, BananaPi-F3 |
+| Architecture | riscv64 |
+| Kernel | Alpine `linux-lts` |
+| Boot | U-Boot distro boot via `extlinux/extlinux.conf` |
+| Root filesystem | f2fs, label `UFLINUX_ROOT` |
+| Status | Experimental |
+
+## Why it is headless-first
+
+The Orange Pi RV2's SpacemiT Ky X1 is a RISC-V SoC of the K1 family, so the image is
+riscv64 and uses Alpine's generic `linux-lts`, which is built with `CONFIG_ARCH_SPACEMIT=y`
+and ships `spacemit/k1-orangepi-rv2.dtb`.
+
+The mainline K1 device tree has **no display or GPU node**. The desktop does start, but
+there is nothing to draw on — the board is expected to be driven over the serial console
+(`ttyS0`) or run headless.
+
+## Booting
+
+The image reuses the board's **own U-Boot** through `extlinux/extlinux.conf` on the ESP,
+alongside the board device tree under `dtbs/`. Nothing is written to the bootloader
+environment, so an existing U-Boot setup keeps working. If you normally flash U-Boot
+separately, that step is unchanged.
+
+## Writing it
+
+Same procedure as every other device image — see [Device images](./index.md#writing-an-image).
+Attach a serial cable at 115200 8n1 on `ttyS0` before first boot; log in as `root` with a
+blank password.
+
+<UpstreamSource path="docs/device-images.md" />
