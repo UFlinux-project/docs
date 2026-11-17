@@ -1,0 +1,26 @@
+---
+import BrandIcon from './BrandIcon.astro';
+const { locale = 'en' } = Astro.props;
+const cs = locale === 'cs';
+const base = cs ? '/cs/' : '/';
+const cards = cs ? [
+ ['01', 'Rychlý start', 'Spusťte live obraz a připojte se k síti.', 'quick-start/'],
+ ['02', 'Instalace', 'Připravte disk a nainstalujte UFLinux.', 'installing/'],
+ ['03', 'Pracovní prostředí', 'Poznejte panel, nabídku Start a nastavení.', 'desktop/overview/'],
+ ['04', 'Zařízení', 'Najděte informace pro svůj počítač nebo desku.', 'devices/'],
+ ['05', 'Reference', 'Odpovědi na časté dotazy a další podrobnosti.', 'reference/faq/'],
+ ['06', 'Pro přispěvatele', 'Sestavte obrazy a zapojte se do vývoje.', 'developer/building/'],
+] : [
+ ['01', 'Quick start', 'Boot a live image and get connected.', 'quick-start/'],
+ ['02', 'Installation', 'Prepare your disk and install UFLinux.', 'installing/'],
+ ['03', 'The desktop', 'Find your way around the taskbar, menu, and settings.', 'desktop/overview/'],
+ ['04', 'Devices', 'Find guidance for your computer or board.', 'devices/'],
+ ['05', 'Reference', 'Answers to common questions and the details you need.', 'reference/faq/'],
+ ['06', 'For contributors', 'Build images and help shape the project.', 'developer/building/'],
+];
+---
+<div class="uf-hub">
+ <div class="uf-hub-heading"><p class="uf-eyebrow">{cs ? 'NAJDĚTE SVOU CESTU' : 'FIND YOUR WAY'}</p><h2>{cs ? 'Co chcete udělat?' : 'What would you like to do?'}</h2><p>{cs ? 'Od prvního spuštění po vlastní sestavení.' : 'From your first boot to your own build.'}</p></div>
+ <div class="uf-cards">{cards.map(([number, title, description, slug]) => <a class="uf-card" href={`${base}${slug}`}><span class="uf-card-number">{number} / <BrandIcon name="arrow-up-right-from-square" /></span><h3>{title}</h3><p>{description}</p></a>)}</div>
+ <div class="uf-about"><div><p class="uf-eyebrow">{cs ? 'MALÝ ZÁKLAD. VLASTNÍ CESTA.' : 'SMALL AT THE CORE. YOURS TO EXPLORE.'}</p><h2>{cs ? 'Začněte od základů.' : 'Start with the essentials.'}</h2><p>{cs ? 'Zjistěte, co je UFLinux, na čem staví a pro koho je určen.' : 'Learn what UFLinux is, what it builds on, and who it is for.'}</p><a href={`${base}introduction/`}>{cs ? 'Co je UFLinux?' : 'What is UFLinux?'} <BrandIcon name="arrow-up-right-from-square" /></a></div><div class="uf-stack"><span>ALPINE LINUX</span><span>LABWC / WAYLAND</span><span>{cs ? 'PROSTOR PRO VAŠE NÁPADY' : 'ROOM FOR YOUR IDEAS'}</span></div></div>
+</div>

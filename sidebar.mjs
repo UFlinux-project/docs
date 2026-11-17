@@ -18,7 +18,8 @@ export const sidebar = [
 		label: 'Start here',
 		collapsed: false,
 		items: [
-			{ label: 'What is UFLinux?', translations: cs('Co je UFLinux?'), slug: 'index' },
+			{ label: 'Documentation', translations: cs('Dokumentace'), slug: 'index' },
+			{ label: 'What is UFLinux?', translations: cs('Co je UFLinux?'), slug: 'introduction' },
 			page({ label: 'Quick start', cs: 'Rychlý start', slug: 'quick-start' }),
 			page({ label: 'Installation', cs: 'Instalace', slug: 'installing' }),
 			page({ label: 'Updates and packages', cs: 'Aktualizace a balíčky', slug: 'updating' }),

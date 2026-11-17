@@ -4,7 +4,6 @@ import starlight from '@astrojs/starlight';
 import { sidebar } from './sidebar.mjs';
 
 export default defineConfig({
-	// Replace with the Cloudflare Pages domain (or custom domain) once the project exists.
 	site: 'https://docs.uflinux.org',
 	output: 'static',
 	trailingSlash: 'ignore',
@@ -16,17 +15,13 @@ export default defineConfig({
 				cs: 'Dokumentace UFLinux',
 			},
 			description:
-				'Official documentation for UFLinux: a minimal Alpine Linux desktop with labwc and a Windows 10-inspired Ironbar taskbar.',
+				'Official documentation for UFLinux: a minimal Alpine Linux desktop with labwc.',
 			defaultLocale: 'root',
 			locales: {
 				root: { label: 'English', lang: 'en' },
 				cs: { label: 'Čeština', lang: 'cs' },
 			},
 			sidebar,
-			logo: {
-				src: './src/assets/uflinux-logo.svg',
-				alt: 'UFLinux leaf logo',
-			},
 			// Starlight appends the entry path relative to the repo root, e.g.
 			// `src/content/docs/desktop/overview.mdx`.
 			editLink: {
@@ -40,15 +35,26 @@ export default defineConfig({
 				},
 			],
 			tableOfContents: { minHeadingLevel: 2, maxHeadingLevel: 3 },
-			favicon: '/favicon.svg',
+			favicon: 'https://uflinux.org/assets/logo.svg',
+			credits: false,
 			head: [
+				{ tag: 'link', attrs: { rel: 'stylesheet', href: 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.1/css/fontawesome.min.css', integrity: 'sha384-m8DKa0MtZAZlyNgF18TSkQRYTPDY0sEELpwK2YijfYnVFH8kxiaO6hvopM168nue', crossorigin: 'anonymous', referrerpolicy: 'no-referrer' } },
+				{ tag: 'link', attrs: { rel: 'stylesheet', href: 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.1/css/solid.min.css', integrity: 'sha384-p/nJzgOJxEnSeUkMQ0nk5oPsUT5x8eOWi6pxU2ls9qcO9B78dCvZk0JSAOXWXUQN', crossorigin: 'anonymous', referrerpolicy: 'no-referrer' } },
+				{ tag: 'link', attrs: { rel: 'stylesheet', href: 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.1/css/regular.min.css', integrity: 'sha384-2RNNQHI9yrjVDjr8zReHCzBa25B4jlokRSel4Cnp9s+PCUDvwxBq8ZbIODO51CZL', crossorigin: 'anonymous', referrerpolicy: 'no-referrer' } },
+				{ tag: 'link', attrs: { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap' } },
+				{ tag: 'link', attrs: { rel: 'sitemap', href: '/sitemap.xml' } },
+				{ tag: 'meta', attrs: { name: 'color-scheme', content: 'dark' } },
 				{
 					tag: 'meta',
-					attrs: { name: 'theme-color', content: '#1f6f4a', media: '(prefers-color-scheme: dark)' },
+					attrs: { name: 'theme-color', content: '#191919' },
 				},
 			],
 			customCss: ['./src/styles/custom.css'],
 			components: {
+				Header: './src/components/Header.astro',
+				Footer: './src/components/Footer.astro',
+				ThemeProvider: './src/components/ThemeProvider.astro',
+				ThemeSelect: './src/components/ThemeSelect.astro',
 				PageTitle: './src/components/PageTitle.astro',
 			},
 		}),

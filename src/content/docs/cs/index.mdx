@@ -1,77 +1,23 @@
 ---
-title: Co je UFLinux?
-description: UFLinux je nezávislá lehká linuxová distribuce postavená na Alpine Linux s vlastním Waylandovým pracovním prostředím.
-sidebar:
-  order: 1
-source: README.md
+title: Dokumentace
+description: Začněte s UFLinuxem. Prozkoumejte instalaci, pracovní prostředí, podporovaná zařízení a příručky pro přispěvatele.
+template: splash
+editUrl: false
+hero:
+  title: Váš systém.<br />Váš další krok.
+  tagline: Dokumentace UFLinux. Jasná cesta od prvního spuštění k pracovnímu prostředí podle vašich představ.
+  actions:
+    - text: Začínáme
+      link: /cs/quick-start/
+      attrs:
+        class: uf-action-start
+    - text: Stáhnout UFLinux
+      link: https://uflinux.org/cs/downloads/
+      variant: secondary
+      attrs:
+        class: uf-action-download
 ---
 
-import UpstreamSource from '../../../components/UpstreamSource.astro';
+import DocsHub from '../../../components/DocsHub.astro';
 
-UFLinux je nezávislá linuxová distribuce postavená na **Alpine Linux**. Spojuje malou a
-bezpečnostně orientovanou základnu Alpine s pracovním prostředím, které je vlastní:
-Waylandová relace, vlastní aplikace Nastavení, vlastní nabídka Start a instalátor, který
-nesahá na vaše rozdělení disku.
-
-Projekt je zatím **před vydáním**. Základnu tvoří verze `0.1.0` postavená na Alpine Linux
-3.24. Vše na těchto stránkách popisuje, co tato základna umí dnes.
-
-## Co dostanete
-
-- **Waylandové pracovní prostředí** na kompozitoru [labwc](https://labwc.github.io/)
-  s shellem `uflinux-desktop` – panelem úloh napsaným v čistém GTK4
-  a udržovaným přímo v repozitáři distribuce – a ladícím tmavým motivem.
-- **Nastavení UFLinux**, aplikaci v GTK4 pro síť, zvuk, napájení, displeje, Bluetooth,
-  VPN WireGuard, tapetu a informace o systému, s rychlým nastavením v panelu úloh.
-- **Residentní panel úloh** s nabídkou Start, spouštěčem, připnutými oblíbenými, náhledy
-  oken při najetí kurzorem a hodinami, které otevírají kalendář a centrum oznámení.
-- **Balíčky Alpine** z odpovídajících stabilních větví `main` a `community` a podepsaný
-  repozitář UFLinux s vlastními balíčky a menším repozitářem aplikací.
-- **Šest CPU architektur** obrazů ISO a samostatné diskové obrazy pro několik desek.
-- **Malou náročnost.** Nainstalované prostředí je měřeno a přijato při 512 MiB RAM, jednom
-  displeji a bez odkládacího prostoru.
-
-## Čím se liší od čistého Alpine
-
-Alpine vám dá základní systém a pracovní prostředí si sestavíte sami. UFLinux tato rozhodnutí
-udělá za vás a výsledek udržuje:
-
-| | Alpine | UFLinux |
-| --- | --- | --- |
-| Síť | `wpa_supplicant` nebo NetworkManager | ConnMan + iwd, ovládáno z Nastavení |
-| Privilegované příkazy | `sudo` | `doas`, účet root je zamčený |
-| Přihlašovací obrazovka | vaší volby | ReGreet s tmavým motivem adw-gtk3, bez výběru relace |
-| Panel a relace | vaší volby | `uflinux-desktop` + labwc s konfigurací od UFLinux |
-| Nastavení | dotazy `setup-alpine` | Nastavení UFLinux a relační služba |
-| Správa napájení | vaší volby | TLP se třemi profily a politikou tlačítka napájení |
-| Synchronizace času | `ntpd` / `chronyd` | pouze SNTP klient ConnMan |
-
-Není to fork Alpine. UFLinux staví sadu vlastních balíčků nad pevně určeným vydáním Alpine a
-skládá je do obrazů.
-
-## Pro koho je
-
-UFLinux cílí na lidi, kteří chtějí lehké, Wayland-first pracovní prostředí a nevadí jim
-správce balíčků a vydávací model Alpine. Zatím to není distribuce „stáhni a zapomeň": jen
-jedna ze šesti architektur byla otestována při startu a podpora zařízení je kromě Raspberry Pi
-a virtuálního stroje tenká.
-
-## Kam dál
-
-- [Rychlý start](./quick-start.md) — nabootujte live obraz a buďte online za pár minut.
-- [Instalace](./installing.md) — jak nainstalovat UFLinux na disk.
-- [Přehled pracovního prostředí](./desktop/overview.md) — z čeho se relace skládá.
-- [Obrazy pro zařízení](./devices/index.md) — Raspberry Pi a desky Qualcomm a RISC-V.
-- [Pro přispěvatele](./developer/building.md) — jak se obrazy staví.
-
-## Licence a původ textů
-
-Kód a balíčky UFLinux jsou pod licencí `GPL-3.0-only`. Balíčky třích stran a záplaty si
-zachovávají vlastní licence; obrazy obsahují SPDX inventuru toho, co je v nich fyzicky
-přibaleno.
-
-Tyto dokumenty vznikly přepracováním poznámek vývojářů z repozitáře
-[`UFlinux-project/uflinux3`](https://github.com/UFlinux-project/uflinux3). Stránky odvozené
-od tamních souborů mají na konci odkaz na přesný zdrojový soubor.
-
-<UpstreamSource path="README.md" />
+<DocsHub locale="cs" />

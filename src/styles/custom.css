@@ -1,17 +1,95 @@
-/* UFLinux brand: leaf green over Starlight's defaults. */
-:root {
-	--sl-color-accent-low: #cfe6d8;
-	--sl-color-accent: #2f8a5b;
-	--sl-color-accent-high: #1f6f4a;
-	--sl-font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Noto Sans', sans-serif;
+/* Shared visual language with https://uflinux.org/. */
+:root, :root[data-theme='dark'] {
+ --sl-font: 'Ubuntu', system-ui, sans-serif;
+ --sl-color-white: #f5f5f5;
+ --sl-color-gray-1: #e0e0e0;
+ --sl-color-gray-2: #d1d1d1;
+ --sl-color-gray-3: #bcbcbc;
+ --sl-color-gray-4: #858585;
+ --sl-color-gray-5: #484848;
+ --sl-color-gray-6: #292929;
+ --sl-color-black: #181818;
+ --sl-color-accent-low: #303030;
+ --sl-color-accent: #d1d1d1;
+ --sl-color-accent-high: #f5f5f5;
+ --sl-color-bg: #181818;
+ --sl-color-bg-nav: #181818;
+ --sl-color-bg-sidebar: #181818;
+ --sl-color-hairline: #3a3a3a;
+ --sl-color-hairline-light: #3a3a3a;
+ --sl-color-hairline-shade: #3a3a3a;
+ --sl-nav-height: 9.5rem;
+ --sl-content-width: 48rem;
+ color-scheme: dark;
 }
-
-:root[data-theme='dark'],
-:root[data-theme='light'] {
-	--sl-color-accent-low: #14402c;
-	--sl-color-accent: #4fae7c;
-	--sl-color-accent-high: #a8d8bd;
+:root:not([data-has-sidebar]) { --sl-content-width: 74rem; }
+html { scrollbar-gutter: stable; }
+body { background: #181818; }
+a:focus-visible, button:focus-visible, select:focus-visible { outline: 3px solid #d1d1d1; outline-offset: 5px; }
+.uf-header { max-width: 1280px; margin: auto; height: 100%; display: flex; flex-direction: column; }
+.uf-global { display: flex; align-items: center; gap: 2rem; min-height: 80px; }
+.uf-brand { display: inline-flex; align-items: center; gap: 9px; font-size: 1.6rem; font-weight: 700; letter-spacing: -.05em; white-space: nowrap; text-decoration: none; color: #f5f5f5; }
+.uf-brand img { flex-shrink: 0; border-radius: 50%; }
+.uf-global nav { display: flex; gap: 2rem; margin-left: auto; font-size: .9rem; }
+.uf-global nav a { color: #bcbcbc; text-decoration: none; white-space: nowrap; }
+.uf-global nav a[aria-current], .uf-global nav a:hover { color: #f5f5f5; }
+.uf-global starlight-lang-select { border-left: 1px solid #3a3a3a; padding-left: 1rem; }
+.uf-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex: 1; border-top: 1px solid #3a3a3a; padding-block: .5rem; }
+.uf-toolbar > a { font-size: .65rem; letter-spacing: .17em; color: #bcbcbc; text-decoration: none; }
+.uf-toolbar site-search { width: min(100%, 28rem); }
+.uf-footer { margin-top: 4rem; padding-top: 2.5rem; border-top: 1px solid #3a3a3a; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 1.5rem; }
+.uf-footer p, .uf-footer nav { font-size: .8rem; color: #bcbcbc; }
+.uf-footer p { margin-top: .75rem; }
+.uf-footer nav { display: flex; flex-wrap: wrap; gap: 1.25rem; align-items: start; }
+.uf-footer a { text-decoration: none; color: #d1d1d1; }
+.uf-footer small { flex-basis: 100%; font-size: .7rem; color: #adadad; }
+.sl-markdown-content h2, .sl-markdown-content h3 { font-weight: 500; letter-spacing: -.025em; }
+h1#_top { font-weight: 500; letter-spacing: -.045em; line-height: 1.1; }
+.sl-markdown-content p { line-height: 1.75; }
+.sl-markdown-content a { text-underline-offset: 4px; }
+.pagination-links a { border-radius: 9px; background: #242424; }
+a[aria-current='page'] { border-radius: 6px; }
+:root[data-has-hero] .hero { grid-template-columns: 1fr; padding-block: clamp(3rem, 7vw, 6rem); border-bottom: 1px solid #3a3a3a; }
+:root[data-has-hero] .hero .stack { text-align: start; }
+:root[data-has-hero] .hero .copy { align-items: flex-start; }
+:root[data-has-hero] .hero h1 { font-size: clamp(2.75rem, 6.5vw, 5.5rem); line-height: 1.04; font-weight: 500; letter-spacing: -.055em; }
+:root[data-has-hero] .hero .tagline { max-width: 38rem; font-size: 1.1rem; line-height: 1.7; color: #bcbcbc; }
+:root[data-has-hero] .hero .actions { justify-content: flex-start; }
+.sl-link-button { border-radius: 7px; font-weight: 500; }
+.sl-link-button.primary { color: #232323; background: #d1d1d1; border-color: #d1d1d1; }
+.sl-link-button.secondary { color: #f5f5f5; background: #242424; border-color: #555; }
+.uf-hub { padding-top: 3.5rem; }
+.uf-eyebrow { font-size: .68rem; font-weight: 500; letter-spacing: .17em; color: #d1d1d1; margin-bottom: 1.25rem; }
+.uf-hub h2 { font-size: clamp(1.8rem, 3.5vw, 2.75rem); font-weight: 500; letter-spacing: -.035em; margin: 0 0 1rem; line-height: 1.15; }
+.uf-hub p { color: #bcbcbc; }
+.uf-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; margin-block: 2.5rem 4rem; }
+.uf-card { display: block; padding: 1.75rem; border: 1px solid #3a3a3a; border-radius: 10px; background: #242424; text-decoration: none; transition: background .15s, border-color .15s; }
+.uf-card:hover { background: #303030; border-color: #858585; }
+.uf-card-number { display: flex; justify-content: space-between; color: #bcbcbc; font-size: .75rem; margin-bottom: 2rem; }
+.uf-card h3 { margin: 0 0 .75rem; color: #f5f5f5; font-size: 1.25rem; font-weight: 500; }
+.uf-card p { margin: 0; font-size: .93rem; line-height: 1.7; }
+.uf-about { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; border-top: 1px solid #3a3a3a; padding-top: 3rem; }
+.uf-about a { display: inline-block; margin-top: 1rem; }
+.uf-stack { display: flex; flex-direction: column; justify-content: center; gap: 1rem; padding: 2rem; border: 1px solid #484848; border-radius: 13px; background: #272727; font-size: .75rem; letter-spacing: .1em; }
+.uf-stack span { padding: 1rem; border-bottom: 1px solid #484848; }
+@media (max-width: 60rem) {
+ :root, :root[data-theme='dark'] { --sl-nav-height: 11rem; }
+ .uf-global { flex-wrap: wrap; gap: .75rem; min-height: 0; padding-block: .5rem; }
+ .uf-global nav { order: 3; width: 100%; justify-content: space-between; gap: .5rem; font-size: .8rem; }
+ .uf-global starlight-lang-select { margin-left: auto; }
+ .uf-brand { font-size: 1.3rem; }
+ .uf-brand img { width: 27px; height: 27px; }
+ .uf-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+@media (max-width: 30rem) {
+ :root, :root[data-theme='dark'] { --sl-nav-height: 13rem; }
+ .uf-global nav { display: grid; grid-template-columns: 1fr 1fr; gap: .5rem; }
+ .uf-toolbar > a { display: none; }
+ .uf-cards, .uf-about { grid-template-columns: 1fr; }
+ .uf-card { padding: 1.5rem; }
+}
+@media (prefers-reduced-motion: reduce) { .uf-card { transition: none; } }
+@media print { .uf-header, .uf-footer { display: none; } }
 
 /* Keep long package names and paths from stretching the content column. */
 .sl-markdown-content code {
@@ -51,3 +129,16 @@
 	color: var(--sl-color-gray-2);
 	background: var(--sl-color-gray-6);
 }
+
+/* Font Awesome webfonts are loaded from the pinned cdnjs stylesheet. */
+.uf-icon { display: inline-block; width: 1em; text-align: center; line-height: 1; letter-spacing: normal; flex-shrink: 0; }
+.uf-action-start::after, .uf-action-download::after {
+ font-family: 'Font Awesome 7 Free';
+ font-weight: 900;
+ font-style: normal;
+ display: inline-block;
+ width: 1em;
+ text-align: center;
+}
+.uf-action-start::after { content: '\f35d' / '';  }
+.uf-action-download::after { content: '\f35d' / '';  }

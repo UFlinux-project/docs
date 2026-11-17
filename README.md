@@ -62,3 +62,21 @@ first deploy, since it drives canonical URLs and the sitemap.
 ## Licence
 
 GPL-3.0-only, matching the distribution.
+
+## Shared website design
+
+The documentation follows the dark design of https://uflinux.org/, using Ubuntu typography
+and the live logo/favicon at https://uflinux.org/assets/logo.svg. Fonts load from Google
+Fonts with system-font fallbacks. Header and footer links follow the selected locale.
+The English and Czech homepages are documentation hubs; the full original introductions
+live at `/introduction/` and `/cs/introduction/`.
+
+Starlight generates the multilingual sitemap index and numbered sitemap files.
+`npm run build` also runs `postbuild`, copying the generated index to `/sitemap.xml`.
+Both the HTML sitemap link and `robots.txt` advertise this URL. The numbered files and
+`/sitemap-index.xml` remain available; the alias updates on every build.
+
+Custom interface icons match uflinux.org: Font Awesome 7.3.1 from cdnjs, using
+the same core, solid, and regular stylesheets with integrity hashes. Shared links
+use the trailing `arrow-up-right-from-square` icon; artwork/license links stay plain.
+Starlight retains its built-in control icons.
