@@ -1,19 +1,40 @@
 ---
+import BrandIcon from './BrandIcon.astro';
 import Search from '@astrojs/starlight/components/Search.astro';
-import LanguageSelect from '@astrojs/starlight/components/LanguageSelect.astro';
 const cs = Astro.locals.starlightRoute.locale === 'cs';
 const home = `https://uflinux.org/${cs ? 'cs/' : ''}`;
+const englishPath = Astro.url.pathname.replace(/^\/cs(?=\/|$)/, '') || '/';
+const czechPath = `/cs${englishPath === '/' ? '/' : englishPath}`;
 ---
 <div class="uf-header">
   <div class="uf-global">
-    <a class="uf-brand" href={home}><img src="https://uflinux.org/assets/logo.svg" width="35" height="35" alt="" /><span translate="no">UFlinux.</span></a>
+    <a class="uf-brand" href={home}><img src="https://uflinux.org/assets/logo.svg" width="35" height="35" alt="" /><span class="uf-wordmark" translate="no">UFlinux.</span></a>
     <nav aria-label={cs ? 'Hlavní navigace' : 'Main navigation'}>
       <a href={home}>{cs ? 'Přehled' : 'Overview'}</a>
       <a href={`${home}downloads/`}>{cs ? 'Ke stažení' : 'Downloads'}</a>
       <a href={`${home}guide/`}>{cs ? 'Začínáme' : 'Get started'}</a>
-      <a href={cs ? '/cs/' : '/'} aria-current="true">{cs ? 'Dokumentace' : 'Documentation'}</a>
+      <a href={cs ? '/cs/' : '/'} aria-current="page">{cs ? 'Dokumentace' : 'Documentation'} <BrandIcon name="arrow-up-right-from-square" /></a>
     </nav>
-    <LanguageSelect />
+    <div class="uf-language-switcher">
+      <label class="uf-language-select">
+        <span class="sr-only">{cs ? 'Vybrat jazyk' : 'Select language'}</span>
+        <BrandIcon name="language" />
+        <select data-uf-language-select autocomplete="off">
+          <option value={englishPath} lang="en" selected={!cs}>English</option>
+          <option value={czechPath} lang="cs" selected={cs}>Čeština</option>
+        </select>
+        <BrandIcon name="chevron-down" />
+      </label>
+      <noscript><a href={cs ? englishPath : czechPath} lang={cs ? 'en' : 'cs'}>{cs ? 'English' : 'Čeština'}</a></noscript>
+    </div>
   </div>
   <div class="uf-toolbar"><a href={cs ? '/cs/' : '/'}>{cs ? 'DOKUMENTACE' : 'DOCUMENTATION'}</a><Search /></div>
 </div>
+<script>
+  document.querySelectorAll<HTMLSelectElement>('[data-uf-language-select]').forEach((select) => {
+    select.addEventListener('change', () => { window.location.href = select.value; });
+    window.addEventListener('pageshow', () => {
+      select.value = select.querySelector<HTMLOptionElement>('option[selected]')?.value ?? select.value;
+    });
+  });
+</script>
