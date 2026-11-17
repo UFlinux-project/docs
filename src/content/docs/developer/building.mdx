@@ -33,23 +33,40 @@ security boundary for hostile source.
 ## The basic command
 
 ```sh
-export APK_REPOSITORY_URL=https://OWNER.github.io/REPO/apk/v3.24/uflinux
+export APK_REPOSITORY_URL=https://repo.uflinux.org/apk/v3.24/uflinux
 sudo --preserve-env=APK_REPOSITORY_URL bash scripts/build.sh --arch x86_64
 ```
+
+`APK_REPOSITORY_URL` is optional: builds from the distribution repository default to
+`https://repo.uflinux.org/apk/v3.24/uflinux`, and other repositories derive
+`https://OWNER.github.io/REPO/apk/v3.24/uflinux` from `GITHUB_REPOSITORY`.
 
 `--stage` accepts `bootstrap`, `packages`, `sign`, `image`, `device`, `verify` or `all`.
 Stages share `--workdir` (default `.state`) and `--outdir` (default `out`); download, APK,
 Cargo and compiler caches use `--cache` (default `.cache/build`). **A lockfile change
-requires a fresh work directory**, though verified downloads can be reused.
+requires a fresh work directory**, though verified downloads can be reused. After each
+compile the Cargo and compiler caches are made world-readable, because abuild leaves them
+owned by uid 1000 with mode 640 and the host user that archives or restores a cache
+directory could not read them otherwise.
 
 With `--device BOARD`, the `device` (or `all`) stage assembles an installed board disk image
 instead of an ISO — see [Device images](../devices/index.md#building-one-locally).
 
 ## What the lockfile pins
 
-`config/sources.lock.json` pins minirootfs hashes, aports and Ironbar commit archive hashes,
-feature choices, and the default source epoch. Downloaded files are re-checked on every
-reuse.
+`config/sources.lock.json` pins minirootfs hashes, commit archive hashes for the vendored
+sources (aports, ConnMan, gnome-backgrounds, gpu-screen-recorder, the labwc themes and
+ReGreet), feature choices, and the default source epoch. Downloaded files are re-checked on
+every reuse.
+
+The `apps` section pins UFLinux's own apps repository, which publishes `uflinux-files`: its
+URL, signing key, key hash and indexed architectures. The index itself is not pinned by
+hash — the repository is republished whenever its packages are rebuilt, so the URL is the
+pin, the same policy as the Nura suite used by the QCS6490 image. `scripts/check.py`
+verifies the pins and that `aports/uflinux/uflinux3.ec384.pub` matches the published key,
+and `scripts/check-packages.py` re-checks the live indexes. Architectures the apps
+repository does not index never list it, because apk fails on an unreachable repository
+line.
 
 Alpine's official repositories remain on the named stable branch so security revisions can be
 picked up. Resolved package versions and hashes are recorded, but a pinned minirootfs does
@@ -57,9 +74,18 @@ picked up. Resolved package versions and hashes are recorded, but a pinned minir
 
 ## The stages
 
-Twenty-two custom APKs are built: patched ConnMan (runtime, OpenRC, dev, docs, debug),
-Ironbar, the Settings components, and the distribution packages. ConnMan's pinned upstream
-source and Alpine compatibility patches are retained with the build inputs.
+Thirty-one custom APKs are built, in five origins:
+
+| Origin | APKs |
+| --- | --- |
+| `connman` | patched ConnMan: runtime, OpenRC, dev, docs, debug (seven) |
+| `uflinux-regreet` | ReGreet (one) |
+| `gpu-screen-recorder` | patched recorder: runtime, dev, docs, debug (four) |
+| `uflinux-settings` | GUI, desktop shell, screencapture tool, installer UI, daemon/CLI, system helper, OpenRC, documentation, debug symbols (nine) |
+| `uflinux` | distribution packages (ten) |
+
+ConnMan's pinned upstream source and Alpine compatibility patches are retained with the build
+inputs.
 
 | Stage | What it does |
 | --- | --- |
@@ -68,11 +94,11 @@ source and Alpine compatibility patches are retained with the build inputs.
 | `sign` | Verifies incoming development signatures, replaces only the APK v2 signature stream, signs indexes, and verifies the results. |
 | `image` | Alpine `mkimage` with a custom profile, an APK cache, and a reproducible configuration overlay. See [Boot-image compression](./compression.md). |
 | `device` | With `--device`: installs the board's package set into a separate chroot, configures an installed system, regenerates the initramfs without a modloop, and writes a raw GPT image without loop devices or mounts. The assembled disk is re-read and checked for geometry, identifiers, boot files and initramfs compression before compression. |
-| `verify` | Installs the custom packages through apk, validates Ironbar's actual configuration, tests a headless desktop and toplevel controls, and exercises the installer safeguards. Firmware boot and disk installation are separate VM jobs. |
+| `verify` | Installs the custom packages through apk, tests a headless desktop and toplevel controls against the resident desktop shell (quick-settings panels, Start menu and wallpaper drawing), checks every shipped executable's architecture and library linkage, and exercises the installer safeguards. Firmware boot and disk installation are separate VM jobs. |
 
 ## Building one package
 
-Use the same entry point, and repeat independently for each origin:
+Use the same entry point, and repeat independently for each of the five origins:
 
 ```sh
 sudo --preserve-env=APK_REPOSITORY_URL bash scripts/build.sh --arch x86_64 \
@@ -94,7 +120,14 @@ python3 scripts/merge-packages.py --arch x86_64 --version 0.1.0
 
 Collection rejects missing APKs, stale hashes, mixed source commits, differing build
 settings and incomplete native reproducibility proofs. Each native origin must have its
-clean-rebuild report first.
+clean-rebuild report first. Parallel builds retain build APKs, Cargo inputs and sources
+separately under `out/inputs/ARCH/ORIGIN`, with the origin in the release asset name;
+sequential builds keep the original four-archive format.
+
+GitHub compiles the five origins independently: a pull request or `main` push schedules
+five compile jobs (x86_64 only), and a release tag or full-matrix manual run schedules
+thirty — one per architecture and origin — with at most eight compile jobs at a time. Each
+origin gets its own VM, development signing key, timeout and cache.
 
 ## Outputs
 
@@ -116,13 +149,19 @@ Do not reuse results after changing inputs.
 ## Reproducibility
 
 The build sets `SOURCE_DATE_EPOCH`, UTC, stable paths, normalised tar metadata, and gzip
-without timestamps; GitHub uses the source commit time. Ironbar and Settings build with
-`opt-level=3`, fat LTO, eight codegen units, abort-on-panic, and dynamically linked Alpine
-libraries, with no `target-cpu=native` or host instruction-set tuning.
+without timestamps; GitHub uses the source commit time. The Rust origins build with
+`opt-level=s`, eight codegen units, abort-on-panic, and dynamically linked Alpine libraries.
+The Settings origin additionally forces fat LTO in its `APKBUILD`, overriding the workspace's
+`lto = "thin"`; ReGreet only sets the optimization level. Release builds use Cargo's default
+debug-info level, and Alpine still splits any available debug symbols into the debug APKs.
+There is no `target-cpu=native` or host instruction-set tuning.
 
 These controls help reproducibility, but **byte-for-byte reproducibility is not claimed**
 until two clean builds with identical resolved packages have been compared. Clean-build
-comparisons cover unsigned APK control and data payloads, not whole ISOs.
+comparisons cover unsigned APK control and data payloads, not whole ISOs. The native CI jobs
+rebuild each origin with a fresh compiler target directory and compare every custom APK's
+control and data streams excluding signatures; publication requires that report to match the
+exact native package set being published.
 
 To reconstruct an older build, use its source commit and recorded epoch, unpack the input
 caches, and resolve the recorded APK revisions from the saved packages. If mirrors have
@@ -134,9 +173,23 @@ an offline replay mode.
 
 The SPDX file inventories APKs physically bundled in the ISO, including packages available
 for installation but not installed at live boot. It is not a claim that every cached package
-is running. Original APK licence annotations are retained in `licenseComments`;
+is running. Publication requires every custom package that is not a `-dbg`, `-doc` or `-dev`
+subpackage to appear in that inventory with the same checksum as the published APK. The
+exception is the device-only set in `ISO_EXCLUDED_PACKAGES` (`scripts/builder.py`), currently
+`uflinux-device`: those APKs are built, signed and published so device disk images can
+install them from the release repository, but the live system never pulls them in, so
+requiring them in the ISO would block every release. Original APK licence annotations are
+retained in `licenseComments`;
 `licenseDeclared` and `licenseConcluded` use `NOASSERTION`, because Alpine annotations can
 contain non-SPDX strings and the inventory does not guess how to reinterpret them.
+
+## The Settings workspace
+
+Settings, the desktop shell and the screencapture tool share `settings/Cargo.lock`. Their
+UIs link GTK4; the session service and privileged helper do not. `cargo auditable` records
+dependency data. The Start menu is not a separate crate: its sources live in
+`settings/start-menu/src` and are compiled into `uflinux-desktop` with `#[path]` module
+declarations, so the taskbar, its panels and the Start menu are one process.
 
 ## After editing Settings
 

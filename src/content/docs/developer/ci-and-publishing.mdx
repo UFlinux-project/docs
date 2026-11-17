@@ -7,7 +7,7 @@ source: docs/github.md
 import UpstreamSource from '../../../components/UpstreamSource.astro';
 
 The whole distribution is built by GitHub Actions. Pull requests and pushes to `main` build
-x86_64; manual runs and version tags build all seven architectures. Only push events for
+x86_64; manual runs and version tags build all six architectures. Only push events for
 valid version tags can publish — a manual run never becomes a release build by supplying a
 private key.
 
@@ -15,8 +15,9 @@ private key.
 
 Compilation runs as five independent package-origin jobs per architecture — `connman`,
 `gpu-screen-recorder`, `uflinux-regreet`, `uflinux-settings` and `uflinux` — each with its
-own VM, development signing key, timeout and cache. PR and `main` builds schedule twenty
-compile jobs; manual and tag runs schedule thirty-five, with at most eight running at once.
+own VM, development signing key, timeout and cache. PR and `main` builds schedule five
+compile jobs; manual and tag runs schedule thirty, one per architecture and origin, with at
+most eight running at once.
 
 Heavy Rust builds and their native clean-rebuild comparisons run independently. Signing and
 ISO assembly wait for a complete validated set of APKs. The image job checks completeness,
@@ -35,26 +36,32 @@ key files are removed when those commands finish — including on failure. Build
 development keys without release secrets, so only public keys, APKs, images, caches of public
 inputs and test records are uploaded.
 
-Generating a persistent key:
+Generating a persistent key (P-256 or P-384), in a directory of its own — `$HOME/.config/uflinux`
+is the desktop's user-preference directory:
 
 ```sh
-install -d -m 700 "$HOME/.config/uflinux"
+install -d -m 700 "$HOME/.config/uflinux3-signing"
 openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 \
-  -out "$HOME/.config/uflinux/uflinux.ec"
-chmod 600 "$HOME/.config/uflinux/uflinux.ec"
-openssl pkey -in "$HOME/.config/uflinux/uflinux.ec" -pubout \
-  -out "$HOME/.config/uflinux/uflinux.ec.pub"
+  -out "$HOME/.config/uflinux3-signing/uflinux.ec"
+chmod 600 "$HOME/.config/uflinux3-signing/uflinux.ec"
+openssl pkey -in "$HOME/.config/uflinux3-signing/uflinux.ec" -pubout \
+  -out "$HOME/.config/uflinux3-signing/uflinux.ec.pub"
 ```
 
 Add the **PEM file contents** — not paths, not base64 — as the `APK_SIGNING_PRIVATE_KEY` and
-`APK_SIGNING_PUBLIC_KEY` Actions secrets. A previously uploaded RSA pair is rejected rather
-than silently accepted. See [Repository setup](./repository-setup.md).
+`APK_SIGNING_PUBLIC_KEY` Actions secrets. Anything that is not an EC P-256 or P-384 key — an
+uploaded RSA pair, for example — is rejected rather than silently accepted. See
+[Repository setup](./repository-setup.md).
+
+The apps repository that publishes `uflinux-files` is signed by a **separate** key,
+`uflinux3.ec384.pub`, which `uflinux-release` installs and which is also published next to the
+apps index.
 
 ## Publication gate
 
 Publication is serialised and requires package and desktop verification for every
 architecture plus actual ISO installation and reboot reports for every configured firmware
-mode. It then:
+mode — currently the x86_64 BIOS and UEFI pair. It then:
 
 1. prepares a **draft** release,
 2. deploys the complete signed Pages repository,
@@ -72,17 +79,17 @@ Pages and Releases are separate services, so this is not a cross-service atomic 
 ## Retention and limits
 
 The repository keeps the current generation and **two previous generations** of custom APKs.
-A snapshot in each release supplies the next publication's history. Upstream packages and
-ISOs are not hosted on Pages.
+The next publication retrieves its history from the existing Pages repository. Upstream
+packages and ISOs are not hosted on Pages.
 
 Publishing refuses a Pages payload over 900 MiB and an individual release asset at or above
 2 GiB. Input archives and multi-architecture compiler caches consume significant artifact
-storage, so review your account's storage usage and retention settings.
+storage, so review your account's storage usage and retention settings. Per-run compiler
+cache keys allow saving progress after a failed or interrupted build.
 
-Rebuild inputs are attested and uploaded to the unpublished draft by architecture, so a
-publication runner never has to hold all architectures' input caches at once. The final
-`SHA256SUMS` includes those assets, and ISOs plus the final APK repository are published only
-after every input upload and verification job succeeds.
+Rebuild inputs stay available as workflow artifacts under the configured retention period;
+package inventories and test records remain in the image and VM artifacts. ISOs are
+published only after every input upload and verification job succeeds.
 
 ## Device images in CI
 
@@ -101,16 +108,17 @@ device problem can never leave a release half published.
 ```sh
 sha256sum -c SHA256SUMS
 gh attestation verify uflinux-0.1.0-x86_64.iso --repo OWNER/REPO
-gh attestation verify uflinux-apk-repository.tar.gz --repo OWNER/REPO
 gh attestation verify uflinux-0.1.0-rpi-aarch64.img.zst --repo OWNER/REPO
 ```
 
 Device images are not listed in `SHA256SUMS`; each has its own `.img.zst.sha256` sidecar.
 Download the assets named in `SHA256SUMS` before checking it.
 
-The repository snapshot contains `uflinux.ec.pub`; install it under that name in
-`/etc/apk/keys` when configuring a client manually. Obtain and verify the initial key through
-the authenticated release — a checksum downloaded beside a file is not independent
+The Pages repository provides `uflinux.ec.pub`; install it under that name in
+`/etc/apk/keys` when configuring a client manually. The apps repository is signed by the
+separate `uflinux3.ec384.pub` key, which `uflinux-release` installs and which is also
+published next to the apps index. Obtain and verify the initial keys through an
+independently trusted channel — a checksum downloaded beside a file is not independent
 authentication.
 
 <UpstreamSource path="docs/github.md" />

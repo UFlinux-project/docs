@@ -6,8 +6,8 @@ source: docs/architectures.md
 
 import UpstreamSource from '../../../components/UpstreamSource.astro';
 
-UFLinux builds packages and ISO images for seven Alpine architectures. The important caveat
-is up front: **only the x86_64 ISO is boot-tested.** The other six are built and published,
+UFLinux builds packages and ISO images for six Alpine architectures. The important caveat
+is up front: **only the x86_64 ISO is boot-tested.** The other five are built and published,
 but no virtual machine is ever started with them.
 
 ## ISO matrix
@@ -19,15 +19,14 @@ but no virtual machine is ever started with them.
 | aarch64 | native ARM64 runner | none |
 | armv7 | ARM64 runner, qemu-arm | none |
 | ppc64le | qemu-ppc64le | none |
-| s390x | qemu-s390x | none |
 | riscv64 | qemu-riscv64 | none |
 
 `armhf` is not among them. x86 uses the x86_64 kernel's 32-bit compatibility support, and
 armv7 is emulated on ARM64 runners because AArch32 support is optional in ARM64 kernels.
 
 The x86_64 boot test runs on every commit, pull request, tag and full-matrix run. A release
-requires green build reports for all seven rows and green boot reports for both x86_64
-firmware modes.
+requires green build reports for all six rows and green boot reports for both x86_64
+firmware modes — the gate asks only for the boot tests that actually run.
 
 ## Device image targets
 
@@ -57,15 +56,16 @@ certification.
   Secure Boot signatures; APK and modloop signatures are separate mechanisms.
 - The graphical stack uses packaged Mesa and Alpine kernels and firmware. Physical GPU,
   Wi-Fi, suspend, multiple displays, Bluetooth and proprietary drivers all need separate
-  hardware testing. Bluetooth is not in the default bundle.
+  hardware testing. Bluetooth (BlueZ) and ConnMan's WireGuard VPN service ship in the
+  desktop meta but have only fixture-level verification.
 
 ## What every target does get checked
 
-Every target runs Ironbar's upstream tests during compilation. Verification then checks the
-actual Ironbar configuration, a headless labwc compositor, foreign-toplevel protocol
-availability, terminal mapping, minimising and focusing, panel survival, screenshot creation
-and memory reporting. Missing physical battery, network or audio hardware is not presented
-as physical-device testing.
+Every target runs the Settings workspace unit tests (`cargo test --workspace --frozen`)
+during compilation. Verification then checks a headless labwc compositor, foreign-toplevel
+protocol availability, terminal mapping, minimising and focusing, panel survival,
+screenshot creation and memory reporting. Missing physical battery, network or audio
+hardware is not presented as physical-device testing.
 
 The x86_64 VM tests exercise real OpenRC boot, networking for package access, installer
 validation, XFS mounting, user and password setup, preservation of an unrelated partition,

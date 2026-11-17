@@ -1,7 +1,6 @@
 ---
 title: Device images
 description: Installed GPT disk images for Raspberry Pi, QCS6490 and SpacemiT K1 boards, and virtual machines.
-status: Experimental
 source: docs/device-images.md
 ---
 
@@ -43,10 +42,11 @@ The uncompressed image is 6144 MiB (5120 MiB for `vm`), so any larger card works
 root partition grows to fill it. Disk, partition and FAT volume identifiers are derived
 from the version, board id and architecture, so a rebuild produces the same GUIDs.
 
-The kernel command line uses `root=PARTUUID=<ROOT partition GUID> rootwait
-rootfstype=<fs> rootflags=rw`. Alpine's `nlplug-findfs` matches `PARTUUID` against the
-*partition* GUID, not the disk GUID, and naming the filesystem type keeps the initramfs to
-one filesystem module.
+The kernel command line uses `root=UUID=<ROOT filesystem UUID> rootwait rootfstype=<fs>
+rootflags=ro`. The formatters set the filesystem UUID to the root partition GUID too, and
+Alpine's initramfs passes root to BusyBox `mount`, which resolves filesystem `UUID=` and
+`LABEL=` but not `PARTUUID=`. The explicit type means the initramfs carries only the one
+filesystem module it needs.
 
 ## Writing an image
 
@@ -67,22 +67,25 @@ Images are published with Zstandard level 12 compression. See
 
 ## First login
 
-Images ship **no regular user**. `root` has an empty password, so the first login is `root`
-with a blank password — over the serial console or on the framebuffer console (`tty1`).
-Then:
+Every device image ships a regular account: **user / user**. Select the UFLinux session at
+the graphical greeter, or use this account on the text/serial console. The account belongs
+to `wheel`, `audio`, `video`, `input`, `netdev` and, when available, `render`, and both
+`sudo` and `doas` allow administrative commands with its password. To change it after
+login:
 
 ```sh
 passwd
-adduser -G wheel,audio,video,netdev,input yourname
 ```
 
-The greeter is enabled by default, so the new account can log in graphically. Serial gettys
-are configured per board (`ttyMSM0`, `ttyAMA0` or `ttyS0` at 115200 8n1) in addition to
-`tty1` and `tty2`.
+`greetd` with the UFLinux greeter is enabled by default, so the account can log in
+graphically. Serial gettys are configured per board (`ttyMSM0`, `ttyAMA0` or `ttyS0` at
+115200 8n1) in addition to `tty1` and `tty2`.
 
 ## First boot: the root partition grows
 
-The `uflinux-device` OpenRC service runs early in the `boot` runlevel. It does nothing
+The `uflinux-device` OpenRC service — from the `uflinux-device` package, published in the
+release repository but not bundled in the live ISO — runs early in the `boot` runlevel,
+after filesystem checks and before the root remount and `localmount`. It does nothing
 unless `/etc/uflinux/device` exists — which a device image writes with the board id — so it
 is inert on an ordinary installed system.
 
@@ -97,8 +100,12 @@ in `df` only after the next reboot. The full size is already usable for writes.
 
 ## Updates on a board
 
-The shipped `/etc/apk/repositories` lists the published UFLinux repository and Alpine, so
-`apk update` works as soon as the release is public.
+The shipped `/etc/apk/repositories` lists the published UFLinux repository, Alpine, and
+the apps repository on the architectures it indexes, so `apk update` works as soon as the
+release is public. The apps repository carries `uflinux-files`, which the desktop meta
+depends on; its separate `uflinux3.ec384.pub` key is downloaded, verified against the
+build lock and installed under that exact name during the device build, and
+`uflinux-release` ships the same file in the installed system.
 
 The exception is `qcs6490`. Its kernel and the `dtbloader` EFI driver come from Nura, the
 postmarketOS distribution, and are **fetched and unpacked** rather than installed — Nura

@@ -43,7 +43,9 @@ doas dd if=uflinux-0.1.0-x86_64.iso of=/dev/sdX bs=4M oflag=sync status=progress
 ```
 
 Boot from it. The live desktop starts automatically and logs you in as `live`. On a
-serial console, use **live / live**.
+serial console, use **live / live**. The live image also provides a **user / user**
+account with password-authenticated `sudo` and `doas`, the same one the board and VM
+disk images ship.
 
 The live session runs entirely from the media and does not need a network connection to
 reach the desktop. Two things to know:
@@ -61,26 +63,28 @@ Networking is handled by **ConnMan** with **iwd** as its Wi-Fi backend. There is
 `wpa_supplicant`, no NetworkManager, and no `ntpd`/`chronyd` — ConnMan's own SNTP client
 keeps the clock.
 
-Pick **Network** in the panel, or open **Settings → Network**, select your access point,
-and enter the passphrase. From a console, `connmanctl` works as usual.
+Pick **Network** in the taskbar, or open **Settings → Network**, select your access point,
+and enter the passphrase. From a console, `connmanctl` works as usual. The same flyout
+has Bluetooth and WireGuard VPN tabs when the hardware is present.
 
 ## 4. Explore the live session
 
-The panel holds the launcher, taskbar, tray, and separate Network, Sound and Power menus.
-The basics:
+The taskbar holds the Start menu, the pinned and running-window buttons, the quick-settings
+flyout, and the clock, which opens a calendar with a notification centre. The basics:
 
 | Keys | Action |
 | --- | --- |
 | `Super` | Open the Start menu |
 | `Super` + `Space` | Application launcher |
 | `Super` + `Enter` | Terminal (Foot) |
-| `Super` + `E` | Files (Nemo) |
+| `Super` + `E` | Files (UFLinux Files) |
 | `Super` + `I` | Settings |
 | `Super` + `D` | Show the desktop |
 | `Print Screen` | Screenshot and recording tool |
 
-Installed applications include Foot, Nemo, Firefox with uBlock Origin, Celluloid,
-Transmission, GNOME Disks and File Roller. See
+Installed applications include Foot, UFLinux Files, Loupe, htop, Firefox with uBlock
+Origin, Mako, Transmission, Celluloid, GNOME Disks and File Roller. UFLinux Files comes
+from the apps repository and is not published for every architecture. See
 [Desktop overview](./desktop/overview.md) for the full picture and
 [Keyboard shortcuts](./reference/keyboard-shortcuts.md) for every binding.
 

@@ -16,15 +16,14 @@ These are the packaged defaults. The compositor configuration lives in `/etc/xdg
 | `Super` | Open the Start menu |
 | `Super` (release either key) | Toggle the Start menu |
 | `Super` + `R` | Toggle the Start menu |
-| `Super` + `Space` | Application launcher |
+| `Super` + `Space` | Toggle the Start menu |
 | `Super` + `Enter` | Terminal (Foot) |
-| `Super` + `E` | Files (Nemo) |
+| `Super` + `E` | Files (UFLinux Files) |
 | `Super` + `D` | Show the desktop |
 | `Super` + `I` | UFLinux Settings |
 
 Releasing either `Super` key opens the Start menu, so a lone `Super` tap is a launcher
-gesture. `Super` + `Space` opens the launcher inside the Start menu rather than a separate
-search utility.
+gesture. `Super` + `R` and `Super` + `Space` toggle the same menu.
 
 ## Screenshots and recording
 
@@ -65,7 +64,9 @@ search, then returns from All Applications, and finally closes the menu.
 ## Live session credentials
 
 On the live image, the desktop logs in automatically as `live`. On a serial console, use
-**live / live**. The account has passwordless local `doas`, root is locked, and SSH is
-disabled.
+**live / live**. The `live` account has passwordless local `doas`, root is locked, and SSH
+is disabled. The live image also provides a **user / user** account with
+password-authenticated `sudo` and `doas` — the same account the board and VM disk images
+ship.
 
 <UpstreamSource path="README.md" />

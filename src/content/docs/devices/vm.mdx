@@ -42,9 +42,9 @@ qemu-system-x86_64 \
 The root partition grows to fill the virtual disk on first boot, so enlarging the image
 before booting gives you the extra space.
 
-Log in as `root` with a blank password, set `passwd`, and add yourself to
-`wheel,audio,video,netdev,input`. The greeter is enabled, so the new account can then log in
-graphically.
+Log in as **user / user** — the same account every device image ships — and use `sudo` or
+`doas` with that password for administrative commands. The greeter is enabled, so the
+account can log in graphically.
 
 ## Memory
 

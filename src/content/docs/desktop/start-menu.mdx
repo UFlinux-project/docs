@@ -1,15 +1,16 @@
 ---
-title: Start menu
-description: The resident UFLinux Start menu — how to open it, what it contains, and how its tray and power controls behave.
+title: Start menu and taskbar
+description: The resident UFLinux desktop shell — Start menu, pinned taskbar buttons, window previews, clock popover, and tray.
 source: docs/start-menu.md
 ---
 
 import UpstreamSource from '../../../components/UpstreamSource.astro';
 
-The Start menu runs in the resident GTK4 `uflinux-desktop` process. Login starts it
-hidden with its widgets, layout and application catalog already prepared, and it keeps
-them between openings — so the menu appears immediately, and GTK and the compositor draw
-buffers only when the window is mapped.
+The Start menu runs in the resident GTK4 `uflinux-desktop` process — the same process that
+draws the taskbar. Login starts it hidden with its default widgets, layout and
+application catalog already prepared, and it keeps them between openings — so the menu
+appears immediately, and GTK and the compositor draw buffers only when the window is
+mapped.
 
 ## Opening it
 
@@ -37,6 +38,28 @@ and respects existing configuration.
 
 Favorites are fixed. There is no tracking of recent files or recent applications.
 
+## Taskbar buttons, pinning and previews
+
+Beside the Start button, application buttons come from the pinned favourites in
+`$XDG_CONFIG_HOME/uflinux/taskbar.json` plus the running-window groups. Right click opens
+a menu listing the group's windows with a close button each and, for applications, entries
+to launch another window, pin or unpin the button, and close all windows. Pinned buttons
+can be rearranged by dragging one onto another; the new order is written back to the same
+file, and an unreadable file falls back to the defaults rather than blocking the panel.
+
+Resting the pointer on a running app opens thumbnail cards with activation and close
+controls. **Settings → Appearance → Window previews** governs both these images and
+labwc's native Alt+Tab thumbnail grid, and it defaults to enabled; with previews off,
+hover cards keep their titles and Alt+Tab uses the classic list. Capture only runs while
+cards are visible: up to two frames per second per window and four per second in total,
+images at most 320×180, a cache of at most 64 images under 16 MiB expiring after 30
+seconds. Unsupported capture and oversized sources fall back to icons and titles.
+
+The clock opens a popover with a month-navigable calendar and a notification centre that
+reads Mako's list while the popover is open and dismisses notifications individually or
+together. Mako itself is styled as dark rounded cards grouped by summary, anchored
+bottom-right above the taskbar.
+
 ## Power actions
 
 Log out, Restart and Shut down ask for confirmation with **Cancel** selected by default.
@@ -59,12 +82,12 @@ uflinux-desktop --start-menu --output DP-1
 uflinux-desktop --panel network --output HDMI-1
 ```
 
-With no `--output`, labwc chooses the monitor that received the keyboard activation; panel
-buttons always supply their own monitor. The transparent layer captures outside clicks and
-the Start button while leaving other taskbar controls usable. Removing an output closes
-the menu, and the card adapts to smaller outputs and compositor scaling.
+With no `--output`, labwc chooses the monitor that received the keyboard activation;
+taskbar buttons always supply their originating monitor. The transparent layer captures
+outside clicks and the Start button while leaving other taskbar controls usable. Removing
+an output closes the menu, and the card adapts to smaller outputs and compositor scaling.
 
-Panel menus can be opened directly:
+Taskbar menus can be opened directly:
 
 ```sh
 uflinux-desktop --panel network|sound|power --output NAME

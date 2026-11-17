@@ -15,12 +15,13 @@ hardware.
 | Area | Status |
 | --- | --- |
 | x86_64 ISO, BIOS and UEFI | Booted, installed to XFS, rebooted — on every commit, PR, tag and full-matrix run |
-| Other six architectures | Built and published; **no VM is started** |
+| Other five architectures | Built and published; **no VM is started** |
 | Device images | Built on tags; **no boot test configured** |
-| Physical GPU, Wi-Fi, suspend, multi-display, Bluetooth | Not certified; needs separate hardware tests |
+| Physical GPU, Wi-Fi, suspend, multi-display | Not certified; needs separate hardware tests |
+| Bluetooth and WireGuard VPN | Verified against BlueZ and ConnMan VPN fixtures, not physical hardware |
 | Byte-identical whole-ISO rebuild | Not established |
 
-Publication requires green build reports for all seven architectures and green boot reports
+Publication requires green build reports for all six architectures and green boot reports
 for both x86_64 firmware modes. A configured test is not evidence of a successful run — check
 the workflow results and attached build records.
 
@@ -52,6 +53,8 @@ reference targets, not emulated timing guarantees.
 
 Stripped executables: `uflinux-settings` 989,176 B, `uflinux-settingsctl` 735,328 B,
 `uflinux-settingsd` 1,370,184 B, `uflinux-settings-system` 775,912 B, Ironbar 6,703,128 B.
+Those artifacts shipped Ironbar as their taskbar; the current tree replaces it with the
+in-repo `uflinux-desktop` shell, and the numbers are kept as recorded.
 
 ## What the tests actually exercise
 
@@ -85,22 +88,32 @@ facilities fail the gate rather than silently claiming coverage.
 ## Live image memory
 
 The live root unpacks the desktop and the full Papirus icon theme into tmpfs, whose default
-capacity is half of RAM. The current Papirus, artwork and theme package set uses about 993 MiB
+capacity is 75% of RAM. The current Papirus, artwork and theme package set uses about 993 MiB
 in the live root. A 2 GiB live guest exhausted its root filesystem during boot, so live tests
 now allocate 4 GiB — 3 GiB for armv7's QEMU highmem restriction. The runner rejects boot-time
 APK database and kernel memory failures explicitly and logs byte and inode capacity.
 
-## The unified desktop prototype
+## The unified desktop
 
-A unified desktop is packaged separately for isolated testing; the default session still uses
-Ironbar until the replacement's functionality and release gates pass. Do not run the prototype
-beside the normal panel — both provide panel and tray services.
+The unified desktop is the default session: `uflinux-autostart` starts
+`uflinux-desktop --supervise`, and the Ironbar panel it replaced is no longer packaged. Do not
+run a second desktop beside the session's own taskbar — both provide panel and tray services.
 
-Its memory work passed the memory and idle-CPU checks with three sessions per implementation:
-median process-set proportional size fell from 86.8 to 73.5 MiB once settled and from 89.2 to
-75.9 MiB after one pass through all four menus, both a 15% reduction against a 10% requirement.
+Its memory work compared the replacement against that legacy panel as the baseline, with three
+sessions per implementation: median process-set proportional size fell from 86.8 to 73.5 MiB
+once settled and from 89.2 to 75.9 MiB after one pass through all four menus, both a 15%
+reduction against a 10% requirement.
 No replacement session retained more than 0.4 MiB across 100 cycles, none grew its descriptor
 count, and desktop idle CPU peaked at 0.067%.
+
+The quick-settings tabs and notification surfaces are checked by a protocol test that asserts
+the Wi-Fi, Ethernet, Bluetooth and VPN tab labels, the Output and Input audio tabs, and
+identical window extents across tab switches. A separate fixture test drives the daemon against
+BlueZ and ConnMan VPN fixtures, covering adapter power, scanning, pairing, trust, connect and
+disconnect plus a WireGuard import, connect and removal, and checks that an imported private
+key is never echoed back. A taskbar phase seeds `taskbar.json`, restarts the daemon and requires
+the file to survive unchanged, then corrupts the file and requires the daemon to start anyway
+with no popup.
 
 Those figures come from one headless-pixman environment on one kernel and are **not** a release
 approval. The collector does not measure interactive frame latency, widget or D-Bus subscription

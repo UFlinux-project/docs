@@ -15,7 +15,7 @@ attestations to what it publishes.
 
 | Artifact | Naming | Notes |
 | --- | --- | --- |
-| Live ISO | `uflinux-VERSION-ARCH.iso` | Seven architectures |
+| Live ISO | `uflinux-VERSION-ARCH.iso` | Six architectures |
 | Checksums | `SHA256SUMS` | Covers the ISOs |
 | Device images | `uflinux-VERSION-DEVICE-ARCH.img.zst` | Zstandard level 12 |
 | Device checksums | `…img.zst.sha256` | One sidecar per image |
@@ -24,8 +24,12 @@ attestations to what it publishes.
 The repository URL for the current baseline is:
 
 ```text
-https://uflinux-project.github.io/uflinux3/apk/v3.24/uflinux
+https://repo.uflinux.org/apk/v3.24/uflinux
 ```
+
+That is a custom Pages domain — a `CNAME` record pointing at the repository's
+`github.io` site. The separate apps repository carrying `uflinux-files` lives at
+`https://apps-repo.uflinux.org/` and is signed by its own `uflinux3.ec384.pub` key.
 
 ## Verifying a download
 
@@ -52,12 +56,12 @@ alone cannot.
 
 ## Which artifact to trust most
 
-Publication requires green build reports for all seven architectures and green boot reports
+Publication requires green build reports for all six architectures and green boot reports
 for **both x86_64 firmware modes**. That means:
 
 - **x86_64** is the only architecture whose ISO has actually been booted — in CI, on BIOS
   and UEFI, including installation onto XFS and reboot from the installed disk.
-- The other six architectures are built and their packages and ISOs published, but no
+- The other five architectures are built and their packages and ISOs published, but no
   virtual machine is started with them. Expect rough edges.
 - Device images are supplementary. They are attached to the release but cannot block it, and
   none has an automated boot test.
@@ -68,9 +72,11 @@ workflow results and the attached build records rather than assuming a row passe
 
 ## Signing
 
-Packages are signed with an EC P-256 key published as `uflinux.ec.pub`. apk v2 has no ECDSA
-signature stream, so the signature is carried in the SHA-256 stream and the stream name
-`RSA256` describes the digest rather than the algorithm.
+Packages are signed with an EC P-256 or P-384 key published as `uflinux.ec.pub`. apk v2 has
+no ECDSA signature stream, so the signature is carried in the SHA-256 stream and the stream
+name `RSA256` describes the digest rather than the algorithm. The apps repository uses a
+separate key, `uflinux3.ec384.pub`, which `uflinux-release` installs and which is also
+published next to the apps index.
 
 Development and pre-release images are signed with an **ephemeral development key**, not the
 release key. Do not treat a development image as a persistent-key release or use it to

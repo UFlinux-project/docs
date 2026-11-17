@@ -21,16 +21,16 @@ than `main`'s — do not assume the kernel's support lifetime also covers the de
 2. Update the versions, archive URLs, SHA-256/SHA-512 values, aports commit and source epoch
    in `config/sources.lock.json`. Record immutable commits and actual archive hashes — avoid
    moving branches and tags as build inputs.
-3. When upgrading Ironbar, update its APKBUILD version, commit URL, build directory,
-   checksum and desktop dependency. Review its Cargo lockfile, minimum Rust and GTK
-   requirements, feature names, config schema and labwc compatibility. Check its patch
-   against the pinned upstream revision, and keep the originating-monitor environment test.
+3. Update the Settings APKBUILD version, source checksum and `pkgrel` when the workspace
+   changes. Review its Cargo lockfile, minimum Rust and GTK requirements, feature names and
+   labwc compatibility. The desktop shell, Start menu and screencapture tool build from the
+   same workspace and APKBUILD.
 4. When changing Alpine branches, update the branch URLs in the UFLinux APKBUILD and the
    overlay generator together with the lockfile and publishing path. Recheck the pinned
    `mkimage` compatibility patch against the new source.
-5. Update the `uflinux` package version and the distribution default version. Bump Ironbar's
-   `pkgrel` for packaging, flag or patch changes without an upstream version change, and
-   update the exact desktop dependency at the same time.
+5. Update the `uflinux` package version and the distribution default version. Bump the
+   affected origins' `pkgrel` for packaging, flag or patch changes without an upstream
+   version change, and update the exact desktop dependency at the same time.
 6. Run `python3 scripts/update-checksums.py` after changing local package assets, inspect the
    diff, run `scripts/check.py`, then use the full manual build matrix.
 7. Review package, boot and desktop reports before creating the version tag.
@@ -56,9 +56,11 @@ Boards are pinned in `config/devices.json` and `config/devices.lock.json`. Addin
 config change plus a package-availability check; nothing in the builder has to learn about it.
 
 The optional Nura repository is a separate distribution. When the Alpine branch is raised, its
-branch, index hash and supported architecture list must be re-verified against the matching
-Nura release before the device stage can use it again, and board package lists re-checked with
-`scripts/check-packages.py`.
+branch and supported architecture list must be re-verified against the matching Nura release
+before the device stage can use it again, and board package lists re-checked with
+`scripts/check-packages.py`. The Nura index itself is **not** pinned by hash: postmarketOS
+rebuilds a release branch's index regularly, so the branch is the pin and the packages are
+checked against the branch's live index.
 
 ## Adopting a fork
 
@@ -66,9 +68,9 @@ Replace the reserved `noreply@example.invalid` packager identity with a real mai
 identity before public releases, and set the package project URL to your actual repository.
 
 Dependabot updates pinned GitHub Actions; the pinned actionlint Go source commit is reviewed
-separately. Changes to runner images, QEMU, firmware, Alpine's kernel or Ironbar require the
-relevant tests to pass again — **do not mark failed targets as optional simply to produce a
-release**.
+separately. Changes to runner images, QEMU, firmware, Alpine's kernel or the desktop shell
+require the relevant tests to pass again — **do not mark failed targets as optional simply to
+produce a release**.
 
 ## Signing keys
 
@@ -77,7 +79,7 @@ or upload `.state`; that directory contains development keys and temporarily con
 release key during signing. Published metadata includes only public keys and key paths, never
 private PEM contents.
 
-UFLinux signs with an **EC P-256** key. apk v2 has no ECDSA signature: apk-tools 3.0.9
+UFLinux signs with an **EC P-256 or P-384** key. apk v2 has no ECDSA signature: apk-tools 3.0.9
 recognises only the stream names `RSA512`, `RSA256`, `RSA` and `DSA`, and selects a trusted
 key by its **filename** from a plain public-key PEM, so an X.509 certificate is not accepted
 as a key. The EC signature is therefore carried in the SHA-256 stream, and the stream name
@@ -85,7 +87,11 @@ as a key. The EC signature is therefore carried in the SHA-256 stream, and the s
 accepts any OpenSSL-capable private key under `-t RSA256`.
 
 The key uses the stable filename `uflinux.ec.pub`, because apk v2 signatures refer to that
-filename. Keep the same key across routine releases.
+filename. Keep the same key across routine releases. The apps repository is signed by a
+separate key of the same role, published as `uflinux3.ec384.pub`; apk resolves trusted keys by
+filename, so rotating it means replacing that file on every installed system
+(`uflinux-release` ships the bundled copy) and updating the pins in the `apps` section of
+`config/sources.lock.json`.
 
 ### Rotating a key
 
@@ -111,12 +117,16 @@ streams differ because development keys are ephemeral, so
 excluded — it still includes control metadata and timestamps, and matching only the executable
 is a weaker check.
 
-Record the baseline ISO size, stripped Ironbar size, boot time and desktop RSS from attached
-records. No unmeasured minimum-memory or performance claim is implied by the word
+Record the baseline ISO size, desktop shell binary size, boot time and desktop RSS from
+attached records. No unmeasured minimum-memory or performance claim is implied by the word
 "lightweight".
 
-Settings changes require `cargo fmt` and frozen workspace tests. Do not re-enable Ironbar's
-removed NetworkManager and volume modules while using the combined Settings backend.
+Settings changes require `cargo fmt` and frozen workspace tests. The build calculates the
+local source checksum; update the Settings version with `scripts/settings-source.py --update`
+when needed. The desktop shell reads network, audio and power state only through the Settings
+backend — do not add a second client for the same hardware. Check the gpu-screen-recorder patch
+series against the pinned upstream snapshot before upgrading it, and keep the capture tool's
+originating-monitor tests in the desktop harness.
 
 Before release, review PSS, idle CPU, mapped-frame latency, binary and ISO size, and physical
 hardware coverage separately. Only the x86_64 ISO is boot-tested; the other architectures are

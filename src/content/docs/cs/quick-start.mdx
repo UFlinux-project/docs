@@ -41,7 +41,8 @@ doas dd if=uflinux-0.1.0-x86_64.iso of=/dev/sdX bs=4M oflag=sync status=progress
 ```
 
 Nabootujte z něj. Live prostředí se spustí samo a přihlásí vás jako `live`. Na sériové konzoli
-použijte **live / live**.
+použijte **live / live**. Live obraz obsahuje také účet **user / user** s `sudo` i `doas`
+ověřovanými heslem – ten samý, který mají diskové obrazy pro desky a virtuální stroje.
 
 Live relace běží celá z média a k přístupu k ploše nepotřebuje síť. Dvě věci si zapamatujte:
 
@@ -57,26 +58,29 @@ Alpine, takže potřebuje výrazně více paměti než nainstalovaný systém. P
 Síť má na starosti **ConnMan** s **iwd** jako backendem Wi-Fi. Není tam `wpa_supplicant`,
 žádný NetworkManager ani `ntpd`/`chronyd` — hodiny drží SNTP klient ConnManu.
 
-Klikněte na panelu na **Síť**, nebo otevřete **Nastavení → Síť**, vyberte svůj access point a
-zadejte heslo. Z konzole funguje obvyklé `connmanctl`.
+Klikněte v panelu úloh na **Síť**, nebo otevřete **Nastavení → Síť**, vyberte svůj access point a
+zadejte heslo. Z konzole funguje obvyklé `connmanctl`. Když je hardware přítomen, stejná
+vysouvací nabídka má i karty Bluetooth a VPN WireGuard.
 
 ## 4. Prohlídka live relace
 
-Panel obsahuje spouštěč, hlavní lištu, systémový tray a samostatné nabídky Síť, Zvuk a
-Napájení. Základ:
+Panel úloh obsahuje nabídku Start, tlačítka připnutých a otevřených oken, nabídku rychlého
+nastavení a hodiny, které otevírají kalendář s centrem oznámení. Základ:
 
 | Klávesy | Akce |
 | --- | --- |
 | `Super` | Otevřít nabídku Start |
 | `Super` + `Space` | Spouštěč aplikací |
 | `Super` + `Enter` | Terminál (Foot) |
-| `Super` + `E` | Soubory (Nemo) |
+| `Super` + `E` | Soubory (UFLinux Files) |
 | `Super` + `I` | Nastavení |
 | `Super` + `D` | Zobrazit plochu |
 | `Print Screen` | Nástroj na snímky a záznam obrazovky |
 
-Nainstalované aplikace zahrnují Foot, Nemo, Firefox s uBlock Origin, Celluloid, Transmission,
-GNOME Disks a File Roller. Podrobnosti jsou v [Přehledu pracovního prostředí](./desktop/overview.md)
+Nainstalované aplikace zahrnují Foot, UFLinux Files, Loupe, htop, Firefox s uBlock Origin,
+Mako, Transmission, Celluloid, GNOME Disks a File Roller. UFLinux Files pochází z repozitáře
+aplikací a není publikován pro všechny architektury. Podrobnosti jsou v
+[Přehledu pracovního prostředí](./desktop/overview.md)
 a všechny vazby v [Klávesových zkratkách](./reference/keyboard-shortcuts.md).
 
 ## 5. Instalace, až budete připraveni

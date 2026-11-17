@@ -19,15 +19,15 @@ Projekt je zatím **před vydáním**. Základnu tvoří verze `0.1.0` postaven�
 ## Co dostanete
 
 - **Waylandové pracovní prostředí** na kompozitoru [labwc](https://labwc.github.io/)
-  s panelem [Ironbar](https://github.com/JakeStanger/ironbar) nastaveným pro UFLinux a
-  ladícím tmavým motivem.
-- **Nastavení UFLinux**, aplikaci v GTK4 pro síť, zvuk, napájení, displeje, tapetu a
-  informace o systému, s rychlým nastavením na panelu.
-- **Residentní nabídku Start** v samostatném procesu, se spouštěčem, oblíbenými a katalogem
-  aplikací.
+  s shellem `uflinux-desktop` – panelem úloh napsaným v čistém GTK4
+  a udržovaným přímo v repozitáři distribuce – a ladícím tmavým motivem.
+- **Nastavení UFLinux**, aplikaci v GTK4 pro síť, zvuk, napájení, displeje, Bluetooth,
+  VPN WireGuard, tapetu a informace o systému, s rychlým nastavením v panelu úloh.
+- **Residentní panel úloh** s nabídkou Start, spouštěčem, připnutými oblíbenými, náhledy
+  oken při najetí kurzorem a hodinami, které otevírají kalendář a centrum oznámení.
 - **Balíčky Alpine** z odpovídajících stabilních větví `main` a `community` a podepsaný
-  repozitář UFLinux s vlastními balíčky.
-- **Sedm CPU architektur** obrazů ISO a samostatné diskové obrazy pro několik desek.
+  repozitář UFLinux s vlastními balíčky a menším repozitářem aplikací.
+- **Šest CPU architektur** obrazů ISO a samostatné diskové obrazy pro několik desek.
 - **Malou náročnost.** Nainstalované prostředí je měřeno a přijato při 512 MiB RAM, jednom
   displeji a bez odkládacího prostoru.
 
@@ -41,7 +41,7 @@ udělá za vás a výsledek udržuje:
 | Síť | `wpa_supplicant` nebo NetworkManager | ConnMan + iwd, ovládáno z Nastavení |
 | Privilegované příkazy | `sudo` | `doas`, účet root je zamčený |
 | Přihlašovací obrazovka | vaší volby | ReGreet s tmavým motivem adw-gtk3, bez výběru relace |
-| Panel a relace | vaší volby | Ironbar + labwc s konfigurací od UFLinux |
+| Panel a relace | vaší volby | `uflinux-desktop` + labwc s konfigurací od UFLinux |
 | Nastavení | dotazy `setup-alpine` | Nastavení UFLinux a relační služba |
 | Správa napájení | vaší volby | TLP se třemi profily a politikou tlačítka napájení |
 | Synchronizace času | `ntpd` / `chronyd` | pouze SNTP klient ConnMan |
@@ -53,8 +53,8 @@ skládá je do obrazů.
 
 UFLinux cílí na lidi, kteří chtějí lehké, Wayland-first pracovní prostředí a nevadí jim
 správce balíčků a vydávací model Alpine. Zatím to není distribuce „stáhni a zapomeň": jen
-jedna ze sedmi architektur byla otestována při startu a podpora zařízení je kromě Raspberry Pi
-tenká.
+jedna ze šesti architektur byla otestována při startu a podpora zařízení je kromě Raspberry Pi
+a virtuálního stroje tenká.
 
 ## Kam dál
 

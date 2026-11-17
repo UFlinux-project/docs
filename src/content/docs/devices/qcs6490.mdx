@@ -39,9 +39,10 @@ device tree before `systemd-boot` runs, which covers boards whose firmware provi
 
 ## What Nura is — and is not — used for
 
-Nura is used **only** as an extra aarch64 package source, pinned to a specific branch and
-index hash, and only for that kernel and driver. Bootloaders and every other driver come
-from Alpine, and no Nura `device-*` package is ever installed.
+Nura is used **only** as an extra aarch64 package source pinned to a specific branch, and
+only for that kernel and driver. The index itself is not pinned — postmarketOS rebuilds a
+release branch's index regularly — so the branch is the pin. Bootloaders and every other
+driver come from Alpine, and no Nura `device-*` package is ever installed.
 
 Both packages are *fetched and unpacked* rather than installed. Nura ships its own
 `mkinitfs` replacement that conflicts with Alpine's, and apk solves against everything in
@@ -53,13 +54,31 @@ Two consequences you should know about:
 
 - Because the kernel is unpacked, no `update-kernel` hook runs. The image profile assembles
   the boot files by hand and generates the initramfs with Alpine's `mkinitfs` against the
-  unpacked `/lib/modules` tree.
+  unpacked `/lib/modules` tree — postmarketOS is a merged-usr distribution and unpacks its
+  modules under `/usr/lib/modules`, so the profile links `/lib/modules` there.
 - Unpacked packages get no triggers and **cannot be upgraded with `apk`**. To move the
   kernel forward, flash a newer image.
+
+## Early-boot details specific to this board
+
+- **The initramfs must be gzip-compressed.** The inspected Nura `7.0.8-r0` kernel enables
+  `CONFIG_RD_GZIP` but disables `CONFIG_RD_ZSTD`, so the ISO's Zstandard setting would stop
+  the kernel from unpacking the early userspace. `qcs6490` therefore sets
+  `initramfs_compression: gzip` in `config/devices.json`; other boards default to
+  Zstandard.
+- **Firmware for built-in drivers is listed explicitly.** The QUP I2C driver
+  (`i2c-qcom-geni`) is built into the kernel, probes while the initramfs is still running,
+  and asks for `qcom/qcm6490/qupv3fw.elf` before the root filesystem mounts — without it
+  the I2C bus feeding the HDMI bridge never appears. Boards list such files in
+  `initramfs_files`, and the profile passes them to mkinitfs as `custom_files`.
+- **Display modules are loaded from `/etc/modules`.** The whole HDMI chain is loadable
+  modules — the Dragon Q6A's bridge is described in the device tree as `radxa,ra620`, which
+  the generic `simple-bridge` driver claims — so the board lists them in
+  `initramfs_modules` and the profile writes them into the initramfs.
 
 ## Writing it
 
 Same procedure as every other device image — see [Device images](./index.md#writing-an-image).
-Log in as `root` with a blank password over HDMI on `tty1` or the `ttyMSM0` serial console.
+Log in as **user / user** over HDMI on `tty1` or the `ttyMSM0` serial console.
 
 <UpstreamSource path="docs/device-images.md" />

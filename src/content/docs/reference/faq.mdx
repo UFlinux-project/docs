@@ -29,9 +29,10 @@ and one thing the project has actually tested. The installer never partitions or
 ## Why no NetworkManager?
 
 Networking is ConnMan with iwd. It is small, it starts fast, and it covers personal and
-enterprise Wi-Fi plus Ethernet, DHCP, IPv4/IPv6, DNS and proxies. The cost is scope: no
-VPN, hotspot, tethering, modem or Bluetooth networking in the Settings UI. Do not enable
-`networking`, `dhcpcd` or another resolver alongside it.
+enterprise Wi-Fi plus Ethernet, DHCP, IPv4/IPv6, DNS and proxies. WireGuard VPNs are
+supported through ConnMan's VPN daemon and managed from Settings. The remaining gaps are
+hotspot, tethering and modem support. Do not enable `networking`, `dhcpcd` or another
+resolver alongside it.
 
 ## Where is `ntpd`?
 
@@ -58,26 +59,38 @@ a tmpfs root. See [Validation record](../developer/validation.md) for measured f
 
 ## Is GNOME or KDE required?
 
-Neither. The session is labwc, Ironbar, and UFLinux's own GTK4 applications. Nothing pulls
-in a desktop environment. Settings deliberately avoids libadwaita.
+Neither. The session is labwc, the `uflinux-desktop` taskbar shell, and UFLinux's own GTK4
+applications. Nothing pulls in a desktop environment. Settings deliberately avoids
+libadwaita.
 
 ## Can I use my own panel configuration?
 
 Yes — put a file in the right place and it replaces the packaged default rather than
 extending it. Personal compositor config goes in `~/.config/labwc/`, UFLinux preferences in
-`~/.config/uflinux/`. Package upgrades preserve both.
+`~/.config/uflinux/`, and pinned taskbar favourites in `~/.config/uflinux/taskbar.json`.
+Package upgrades preserve all three.
 
 ## Why is the root account locked?
 
-`doas` replaces `sudo`, and the root account is locked so administration goes through a
-named user. On the live image, `live` has passwordless `doas`. On an installed system, the
-user you create has password-authenticated `doas`. Some Settings operations go through a
-polkit-authenticated helper instead, using your own password.
+Administration goes through a named user with `doas` or `sudo`, and the root account stays
+locked. On the live image, `live` has passwordless local `doas`, and the image also provides
+a **user / user** account with password-authenticated `sudo` and `doas`. On an installed
+system, the user you create has password-authenticated `doas`. Some Settings operations go
+through a polkit-authenticated helper instead, using your own password.
 
 ## Is Bluetooth supported?
 
-Not in the default bundle, and not in the Settings UI. The Bluetooth plugin is disabled in
-the ConnMan build.
+Yes. BlueZ ships in the desktop meta, and Settings and the quick-settings flyout have a
+Bluetooth tab that appears when an adapter is present: adapter power, scanning, pairing,
+trusting and connecting. Pairing uses BlueZ's agent-less flow, so devices that need an
+exchange of I/O capabilities can still fail to pair. Bluetooth is verified only at fixture
+level, not on physical hardware.
+
+## Is there a VPN?
+
+WireGuard, through ConnMan's VPN daemon (`connman-vpnd`, from the separate `connman-vpn`
+package). Import a client configuration in Settings → Network → VPN to create a tunnel, then
+connect, disconnect or remove it. Private keys stay in the daemon and are never echoed back.
 
 ## How do I report a problem?
 

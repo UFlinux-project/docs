@@ -9,8 +9,9 @@ source: docs/installing.md
 import UpstreamSource from '../../components/UpstreamSource.astro';
 
 An installed UFLinux system is an Alpine system. Updates are ordinary `apk` operations
-against two kinds of repository: the signed **UFLinux** repository carrying the custom
-packages, and the matching Alpine stable **`main`** and **`community`** branches.
+against three kinds of repository: the signed **UFLinux** repository carrying the custom
+packages, the matching Alpine stable **`main`** and **`community`** branches, and
+UFLinux's smaller **apps** repository.
 
 ```sh
 doas apk update
@@ -20,8 +21,20 @@ doas apk upgrade
 The UFLinux repository for the current baseline is:
 
 ```text
-https://uflinux-project.github.io/uflinux3/apk/v3.24/uflinux
+https://repo.uflinux.org/apk/v3.24/uflinux
 ```
+
+Alongside it, the apps repository publishes `uflinux-files`, the desktop's file manager:
+
+```text
+https://apps-repo.uflinux.org/apk/v3.24/uflinux-apps
+```
+
+It has its own signing key, `uflinux3.ec384.pub`, which the `uflinux-release` package
+installs, and it only indexes `x86_64`, `aarch64`, `ppc64le` and `riscv64`. Because an
+unreachable repository line makes every later `apk` operation fail, the line is written
+only on those four architectures — `x86` and `armv7` systems ship without a graphical
+file manager rather than with an unsatisfiable dependency.
 
 ## Staying on a supported combination
 
@@ -41,12 +54,13 @@ file you had changed.
 | --- | --- |
 | `/etc/xdg` | Packaged desktop defaults |
 | `~/.config/labwc/` | Personal compositor overrides |
-| `~/.config/uflinux/` | UFLinux Settings and Start menu preferences |
+| `~/.config/uflinux/` | UFLinux Settings, taskbar and Start menu preferences |
 | `/etc/tlp.d/` | Power profile drop-ins |
 | `/etc/uflinux/power.json` | Physical power-button policy (root-owned) |
 
-Ironbar uses its packaged defaults when no user file is present, so a personal config
-replaces the packaged panel layout rather than extending it.
+The desktop shell uses its packaged defaults when no user file is present, so a personal
+config replaces the packaged panel layout rather than extending it. Pinned taskbar
+favourites live in `$XDG_CONFIG_HOME/uflinux/taskbar.json`.
 
 ## Rolling a package back
 
@@ -65,9 +79,10 @@ the intended tool — not a snapshot restore.
 
 ## Signing
 
-UFLinux signs packages with an **EC P-256** key published under the stable filename
-`uflinux.ec.pub`. apk v2 has no ECDSA signature stream, so the signature travels in the
-SHA-256 stream and the stream name `RSA256` describes the digest, not the algorithm. If
-you maintain your own fork, see [Maintenance](./developer/maintenance.md#signing-keys).
+UFLinux signs packages with an **EC P-256 or P-384** key published under the stable
+filename `uflinux.ec.pub`. apk v2 has no ECDSA signature stream, so the signature travels
+in the SHA-256 stream and the stream name `RSA256` describes the digest, not the
+algorithm. The apps repository is signed by a separate key, `uflinux3.ec384.pub`. If you
+maintain your own fork, see [Maintenance](./developer/maintenance.md#signing-keys).
 
 <UpstreamSource path="docs/installing.md" />

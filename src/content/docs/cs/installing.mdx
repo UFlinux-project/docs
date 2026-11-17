@@ -28,7 +28,6 @@ Kořenový systém **musí být XFS** a `/boot` musí být samostatný souborov�
 | UEFI | XFS na `/mnt` | FAT32 EFI systémový oddíl na `/mnt/boot` |
 | Legacy BIOS | XFS na `/mnt` | ext4 na `/mnt/boot` |
 | PowerPC | XFS na `/mnt` | ext4 na `/mnt/boot` a navíc PReP oddíl |
-| s390x | XFS na `/mnt` | ext4 na `/mnt/boot`, layout vhodný pro zipl |
 
 Praktická velikost `/boot` je 1 GiB, pro kořen aspoň 8 GiB.
 
@@ -77,7 +76,7 @@ Volitelné přepínače:
 | Přepínač | Význam |
 | --- | --- |
 | `--hostname NAME` | Nastavit název stroje |
-| `--boot-mode uefi\|bios\|native\|auto` | Přepsat detekci firmwaru; `bios` pro legacy BIOS x86, `native` pro PowerPC nebo s390x |
+| `--boot-mode uefi\|bios\|native\|auto` | Přepsat detekci firmwaru; `bios` pro legacy BIOS x86, `native` pro PowerPC |
 | `--online` | Povolit zrcadla Alpine pro balíčky chybějící na médiu |
 
 Kořen musí být prázdný kromě `boot` a `lost+found`. Souběžné instalace jsou odmítnuty zámkem a
@@ -92,8 +91,8 @@ zaregistruje ve firmware UEFI a nainstaluje i svou záložní cestu.
 Nainstalovaný systém dostane:
 
 - nový běžný účet s `doas` ověřovaným heslem a **zamčeným účtem root**;
-- úplný seznam stabilních repozitářů — podepsaný repozitář UFLinux a odpovídající Alpine
-  `main` a `community`;
+- úplný seznam stabilních repozitářů — podepsaný repozitář UFLinux, odpovídající Alpine
+  `main` a `community` a na architekturách, které indexuje, také repozitář aplikací UFLinux;
 - ReGreet jako přihlašovací obrazovku s tmavým motivem adw-gtk3, která startuje prostředí
   přímo a bez výběru relace;
 - initramfs s grafickými ovladači, které byly aktivní během instalace, takže raná grafika

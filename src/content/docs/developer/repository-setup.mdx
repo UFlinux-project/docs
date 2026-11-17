@@ -19,22 +19,24 @@ its default-branch restrictions otherwise reject tag builds.
 
 ## The APK URL
 
-The build infers the repository URL from `GITHUB_REPOSITORY`:
+The distribution repository uses a custom Pages domain:
 
 ```text
-https://OWNER.github.io/REPO/apk/v3.24/uflinux
+https://repo.uflinux.org/apk/v3.24/uflinux
 ```
 
-For the upstream project that is
-`https://uflinux-project.github.io/uflinux3/apk/v3.24/uflinux`. Set the `APK_REPOSITORY_URL`
-repository variable to override it, for example on a custom Pages domain. Account-site
-repositories are handled automatically.
+Point the `repo` DNS record (a `CNAME` to the `github.io` site) at GitHub Pages and set the
+same custom domain in **Settings → Pages**. Forks and other repositories fall back to
+`https://OWNER.github.io/REPO/apk/v3.24/uflinux` inferred from `GITHUB_REPOSITORY` (account-site
+repositories are handled automatically), and an `APK_REPOSITORY_URL` Actions variable
+overrides either default.
 
 ## Signing secrets
 
-Prepare a persistent EC P-256 keypair locally, outside the build workspace, following the
-commands in [CI and publishing](./ci-and-publishing.md#keys). Restrict the directory and
-private key to their owner and keep them out of Git.
+Prepare a persistent EC P-256 or P-384 keypair locally, outside the build workspace, in
+`$HOME/.config/uflinux3-signing/` — `$HOME/.config/uflinux` is the desktop's own preference
+directory. Follow the commands in [CI and publishing](./ci-and-publishing.md#keys), and keep
+the directory and private key owner-restricted and out of Git.
 
 In **Settings → Secrets and variables → Actions**, add:
 
@@ -47,6 +49,9 @@ Both must hold the EC key above; a previously uploaded RSA pair is rejected by t
 rather than silently accepted. apk v2 has no ECDSA signature type, so the key is carried in
 the SHA-256 signature stream — see [Maintenance](./maintenance.md#signing-keys).
 
+The separate apps repository that publishes `uflinux-files` is signed by its own key,
+`uflinux3.ec384.pub`, pinned in the `apps` section of the source lock.
+
 Back up the private key before publishing a release. Do not commit it or paste it into
 issues, logs or chat.
 
@@ -55,7 +60,7 @@ issues, logs or chat.
 - Pushes to `main` and manual dispatch build development images **without** release secrets.
 - A version tag builds the release package set and exposes the key only to trusted signing,
   assembly and publication jobs.
-- Publication is gated on all seven architecture checks plus native integration and
+- Publication is gated on all six architecture checks plus native integration and
   reproducibility records.
 - Pages keeps three release generations and checks the complete bundle's size before
   deploying.

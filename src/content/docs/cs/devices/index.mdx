@@ -1,7 +1,6 @@
 ---
 title: Obrazy pro zařízení
 description: Diskové obrazy UFLinux pro Raspberry Pi, desky Qualcomm a SpacemiT K1 a pro virtuální stroje.
-status: Experimental
 sidebar:
   order: 1
 source: docs/device-images.md
@@ -9,70 +8,105 @@ source: docs/device-images.md
 
 import UpstreamSource from '../../../../components/UpstreamSource.astro';
 
-Kromě ISO pro počítače vydává UFLinux i **diskové obrazy `.img.xz`** pro konkrétní desky a pro
-virtuální stroje. Narozdíl od ISO se rovnou zapisují na celý disk a systém na nich už je
-nainstalovaný — instalátor nespouštíte.
+Kromě ISO pro počítače vydává UFLinux i **nainstalované** GPT diskové obrazy `.img.zst` pro
+konkrétní desky a pro virtuální stroje. Narozdíl od ISO se rovnou zapisují na celý disk a
+systém na nich už je nainstalovaný — instalátor nespouštíte. Není na nich squashfs modloop,
+účet `live` ani live relace.
 
 Obrazy pro zařízení jsou **doplňkové**. Vydání se řídí obrazy ISO; obraz pro desku, který se
-nepodařilo sestavit, vydání nezdrží.
+nepodařilo sestavit, vydání nezdrží — a žádný z nich zatím nemá automatický test při startu.
+Berte je jako náhled.
 
 ## Dostupné obrazy
 
-| Zařízení | Cílová architektura | Obraz | Základ |
-| --- | --- | --- | --- |
-| Raspberry Pi 4 / 400, Pi 5 | `aarch64` | `uflinux-<verze>-raspberrypi-aarch64.img.xz` | `alpine-base-raspberrypi` |
-| Qualcomm Robotics RB5, RB3 Gen 2 | `aarch64` | `uflinux-<verze>-qcs6490-aarch64.img.xz` | `alpine-base-qcs6490` |
-| SpacemiT K1 | `riscv64` | `uflinux-<verze>-spacemit-k1-riscv64.img.xz` | `alpine-base-spacemit-k1` |
-| QEMU / virt | `x86_64`, `aarch64` | `uflinux-<verze>-vm-<arch>.img.xz` | `alpine-base-vm` |
+| Id | Desky | Architektura | Jádro | Start | Kořen | Stav |
+| --- | --- | --- | --- | --- | --- | --- |
+| `rpi` | Raspberry Pi 3, 4 a 5 | `aarch64` | `linux-rpi` | firmware VideoCore | f2fs | Podporováno |
+| `vm` | QEMU, KVM a další hypervize | `x86_64`, `aarch64` | `linux-virt` | UEFI + systemd-boot | XFS | Podporováno |
+| `qcs6490` | Arrow Dragon Q6A a podobné | `aarch64` | Nura `linux-postmarketos-qcom-sc7280` | firmware desky + systemd-boot | f2fs | Experimentální |
+| `spacemit-k1` | Orange Pi RV2, Orange Pi R2S, BananaPi-F3 | `riscv64` | `linux-lts` | distro boot U-Bootu | f2fs | Experimentální |
 
 Stav podpory jednotlivých zařízení je na jejich stránkách:
 [Raspberry Pi](./raspberry-pi.md), [Qualcomm RB5 a RB3 Gen 2](./qcs6490.md),
 [SpacemiT K1](./spacemit-k1.md), [Virtuální stroje](./vm.md).
 
+Jednodeskové cíle používají f2fs, protože ten je stavěný na rovnoměrné opotřebení a chování
+při malých zápisech na kartách SD a eMMC. Obraz `vm` používá XFS, tedy stejný souborový systém
+jako nainstalovaný systém z ISO — virtuální disk žádná z těch omezení nemá.
+
 ## Společná struktura
 
-Každý obraz má GPT rozdělení:
+Každý obraz má stejné GPT rozdělení o dvou oddílech: zaváděcí ESP (FAT32, název `UFLINUX`) a
+kořen (f2fs na deskách, XFS u `vm`, název `UFLINUX_ROOT`), který zabývá zbytek disku.
+Nekomprimovaný obraz má 6144 MiB (u `vm` 5120 MiB), takže stačí jakákoli větší karta a kořenový
+oddíl se při prvním startu roztáhne na celý zbytek.
 
-1. **Výrobní oddíl** — formátovaný při prvním startu, nese `uflinux-release` a výchozí
-   konfiguraci.
-2. **Zaváděcí oddíl** — FAT32 (nebo ext4 tam, kde to platforma vyžaduje).
-3. **Kořen XFS** — při prvním startu se roztáhne na celý zbývající prostor.
-
-Při prvním startu se vytvoří výchozí konfigurace, roztáhne se kořen a zapne se `getty` na
-přenosném rozhraní desky.
+Příkazový řádek jádra používá `root=UUID=<UUID souborového systému ROOT> rootwait
+rootfstype=<fs> rootflags=ro`. Formátovače nastaví UUID souborového systému na stejné GUID jako
+kořenový oddíl a Alpine initramfs předává root příkazu BusyBox `mount`, který umí rozluštit
+`UUID=` a `LABEL=`, ale ne `PARTUUID=`. Explicitní typ souborového systému znamená, že initramfs
+nese jen ten jeden modul, který potřebuje.
 
 ## Zápis obrazu
 
 ```sh
-xz -dc uflinux-0.1.0-raspberrypi-aarch64.img.xz | doas dd of=/dev/sdX bs=4M oflag=sync status=progress
+zstd -d < uflinux-0.1.0-rpi-aarch64.img.zst | doas dd of=/dev/sdX bs=8M oflag=direct status=progress
+sync
+```
+
+Nejdřív zkontrolujte přiložený kontrolní součet:
+
+```sh
+sha256sum -c uflinux-0.1.0-rpi-aarch64.img.zst.sha256
 ```
 
 Zápis maže všechno na cílovém zařízení. U Raspberry Pi se zapisuje na kartu, u Qualcomm desek
-do úložiště v režimu flash — detaily jsou na stránkách zařízení.
+do úložiště v režimu flash — detaily jsou na stránkách zařízení. Obrazy se publikují
+komprimované Zstandardem na úroveň 12.
 
 ## První přihlášení
 
-Přihlašovací údaje jsou `live` s prázdným heslem. Účet root je zamčený a `live` může spouštět
-`doas` bez hesla. Po prvním startu si založte vlastní účet.
+Každý obraz pro zařízení obsahuje běžný účet **user / user**. U grafické přihlašovací obrazovky
+vyberte relaci UFLinux, nebo tento účet použijte na textové či sériové konzoli. Účet je ve
+skupinách `wheel`, `audio`, `video`, `input`, `netdev` a až na výjimky také `render`, a `sudo`
+i `doas` po zadání jeho hesla povolují správcovské příkazy. Heslo změníte po přihlášení:
+
+```sh
+passwd
+```
 
 ## Co je při startu jinak
 
 - **Žádný instalátor.** Systém je nainstalovaný; po nastavení sítě si založte účet a nastavte
   heslo.
-- **Kořen se roztáhne jednou.** Služba `uflinux-device` oddíl prodlouží při prvním startu a
-  pak se sama zakáže.
+- **Kořen se roztáhne jednou.** Služba `uflinux-device` — z balíčku `uflinux-device`, který se
+  publikuje v repozitáři vydání, ale v live ISO se nenachází — oddíl prodlouží při prvním
+  startu, zařadí se po kontrolu souborových systémů a před přeponovení kořene, a pak se už
+  neopakuje.
 - **Přenosná konzole.** Getty je zapnuté na rozhraní, které deska používá — u Pi `tty1`, u
   Qualcomm a SpacemiT desek sériová konzole.
 
-## Poznámka k Nura
+## Aktualizace na desce
 
-Výchozí konfigurace pro RB5 a RB3 Gen 2 předpokládá, že na zaváděcím oddíle je soubor `nura`
-od `nura-firmware-qcom`. Pokud tam není, obraz nabootuje do režimu pro zotavení.
+Nainstalovaný `/etc/apk/repositories` obsahuje publikovaný repozitář UFLinux, Alpine a na
+architekturách, které indexuje, také repozitář aplikací, takže `apk update` funguje, jakmile je
+vydání veřejné. Repozitář aplikací nese `uflinux-files`, na který meta balíček pracovního
+prostředí závisí; jeho samostatný klíč `uflinux3.ec384.pub` se při stavbě pro zařízení stáhne,
+ověří proti build locku a nainstaluje pod přesně tímto názvem, a `uflinux-release` nese stejný
+soubor i v nainstalovaném systému.
+
+Výjimkou je `qcs6490`. Jeho jádro a EFI ovladač `dtbloader` pocházejí z Nury, distribuce
+postmarketOS, a **stahují se a rozbalují** místo instalace — Nura má vlastní náhradu `mkinitfs`,
+která je v konfliktu s alpine verzí, takže apk nesmí řešit závislosti přes oba repozitáře
+naráz. Nura se v `/etc/apk/repositories` nikdy neobjeví. Cenou za to je, že rozbalené balíčky
+nedostávají triggery a **nejde aktualizovat přes `apk`** — nahradí se nově napáleným obrazem.
 
 ## Jak číst stav zařízení
 
-O zařízeních se píše, že jsou „připravená pro vydání". To znamená, že se **sestavují a
-archivují** v CI. Není to tvrzení, že byla ověřena na konkrétním kusu hardwaru — to zatím
-prověřeno nebylo. Viz [Ověření na fyzickém hardwaru](../developer/validation.md).
+Stavební fáze pro zařízení má testy geometrie disku, identifikátorů, množiny balíčků, zaváděcí
+konfigurace a ověření hotového disku, a každé jméno balíčku se kontroluje proti živému indexu
+Alpine a proti určenému indexu Nura. Dva ze čtyř cílů jsou označené jako experimentální a
+žádný z obrazů nekryjí testy startu v QEMU, které ISO dostávají. Viz
+[Ověření na fyzickém hardwaru](../developer/validation.md).
 
 <UpstreamSource path="docs/device-images.md" />
