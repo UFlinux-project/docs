@@ -40,16 +40,15 @@ a:focus-visible, button:focus-visible, select:focus-visible { outline: 3px solid
 .uf-global nav a[aria-current] { color: white; }
 .uf-global a:hover { color: #d1d1d1; }
 .uf-global a:focus-visible { outline: 3px solid #d1d1d1; outline-offset: 5px; }
-.uf-global .uf-icon { display: inline-block; width: 1em; flex-shrink: 0; text-align: center; line-height: 1; letter-spacing: normal; }
 .uf-language-switcher { flex: 0 0 128px; border-left: 1px solid #3a3a3a; padding-left: 16px; }
 .uf-language-select { position: relative; display: flex; align-items: center; width: 112px; color: #bcbcbc; }
 .uf-language-select:hover { color: #f5f5f5; }
 .uf-language-select select { appearance: none; width: 112px; padding: 10px 24px; border: 0; background: transparent; color: inherit; font: inherit; font-size: .875rem; cursor: pointer; text-overflow: ellipsis; }
 .uf-language-select select:focus-visible { outline: 2px solid #d1d1d1; outline-offset: 2px; border-radius: 4px; }
 .uf-language-select option { background: #181818; color: #f5f5f5; }
-.uf-language-select i { position: absolute; pointer-events: none; font-size: .875rem; }
-.uf-language-select .fa-language { left: 0; }
-.uf-language-select .fa-chevron-down { right: 2px; font-size: .7rem; }
+.uf-language-select .uf-icon { position: absolute; pointer-events: none; font-size: .875rem; }
+.uf-language-select .uf-icon-language { left: 0; }
+.uf-language-select .uf-icon-chevron-down { right: 2px; font-size: .7rem; }
 .uf-toolbar { height: 52px; padding: 6px 48px; max-width: 1376px; margin: auto; display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-top: 1px solid #3a3a3a; }
 .uf-toolbar > a { font-size: .65rem; letter-spacing: .17em; color: #bcbcbc; text-decoration: none; }
 .uf-toolbar site-search { width: min(100%, 28rem); }
@@ -152,7 +151,8 @@ a[aria-current='page'] { border-radius: 6px; }
 }
 
 /* Font Awesome webfonts are loaded from the pinned cdnjs stylesheet. */
-.uf-icon { display: inline-block; width: 1em; text-align: center; line-height: 1; letter-spacing: normal; flex-shrink: 0; }
+.uf-icon { display: inline-block; position: relative; width: 1.25em; height: 1em; flex: 0 0 1.25em; overflow: hidden; vertical-align: -.125em; line-height: 0; }
+.uf-icon > .fa-solid { position: absolute; inset: 0; display: block; width: 100%; height: 100%; font-size: inherit; font-style: normal; line-height: 1; text-align: center; letter-spacing: normal; }
 .uf-action-start::after, .uf-action-download::after {
  font-family: 'Font Awesome 7 Free';
  font-weight: 900;

@@ -4,4 +4,6 @@ interface Props {
 }
 const { name } = Astro.props;
 ---
-<i class:list={['uf-icon', 'fa-solid', `fa-${name}`]} aria-hidden="true"></i>
+<span class:list={['uf-icon', `uf-icon-${name}`]} aria-hidden="true">
+  <i class:list={['fa-solid', `fa-${name}`]}></i>
+</span>

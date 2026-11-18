@@ -3,6 +3,23 @@ import starlight from '@astrojs/starlight';
 
 import { sidebar } from './sidebar.mjs';
 
+const fontAwesome = [
+	['fontawesome', 'sha384-m8DKa0MtZAZlyNgF18TSkQRYTPDY0sEELpwK2YijfYnVFH8kxiaO6hvopM168nue'],
+	['solid', 'sha384-p/nJzgOJxEnSeUkMQ0nk5oPsUT5x8eOWi6pxU2ls9qcO9B78dCvZk0JSAOXWXUQN'],
+].map(([name, integrity]) => ({
+	tag: 'link',
+	attrs: {
+		id: `fa-${name}`,
+		rel: 'stylesheet',
+		href: `https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.1/css/${name}.min.css`,
+		integrity,
+		crossorigin: 'anonymous',
+		referrerpolicy: 'no-referrer',
+		media: 'print',
+		onload: "this.onload=null; this.media='all';",
+	},
+}));
+
 export default defineConfig({
 	site: 'https://docs.uflinux.org',
 	output: 'static',
@@ -38,9 +55,7 @@ export default defineConfig({
 			favicon: 'https://uflinux.org/assets/logo.svg',
 			credits: false,
 			head: [
-				{ tag: 'link', attrs: { rel: 'stylesheet', href: 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.1/css/fontawesome.min.css', integrity: 'sha384-m8DKa0MtZAZlyNgF18TSkQRYTPDY0sEELpwK2YijfYnVFH8kxiaO6hvopM168nue', crossorigin: 'anonymous', referrerpolicy: 'no-referrer' } },
-				{ tag: 'link', attrs: { rel: 'stylesheet', href: 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.1/css/solid.min.css', integrity: 'sha384-p/nJzgOJxEnSeUkMQ0nk5oPsUT5x8eOWi6pxU2ls9qcO9B78dCvZk0JSAOXWXUQN', crossorigin: 'anonymous', referrerpolicy: 'no-referrer' } },
-				{ tag: 'link', attrs: { rel: 'stylesheet', href: 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.3.1/css/regular.min.css', integrity: 'sha384-2RNNQHI9yrjVDjr8zReHCzBa25B4jlokRSel4Cnp9s+PCUDvwxBq8ZbIODO51CZL', crossorigin: 'anonymous', referrerpolicy: 'no-referrer' } },
+				...fontAwesome,
 				{ tag: 'link', attrs: { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap' } },
 				{ tag: 'link', attrs: { rel: 'sitemap', href: '/sitemap.xml' } },
 				{ tag: 'meta', attrs: { name: 'color-scheme', content: 'dark' } },
