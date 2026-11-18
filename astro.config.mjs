@@ -52,9 +52,12 @@ export default defineConfig({
 				},
 			],
 			tableOfContents: { minHeadingLevel: 2, maxHeadingLevel: 3 },
-			favicon: 'https://uflinux.org/assets/logo.svg',
+			routeMiddleware: './src/favicon-middleware.ts',
 			credits: false,
 			head: [
+				{ tag: 'link', attrs: { rel: 'icon', href: 'https://uflinux.org/favicon.ico', type: 'image/vnd.microsoft.icon', sizes: '32x32' } },
+				{ tag: 'link', attrs: { rel: 'icon', href: 'https://uflinux.org/favicon.png', type: 'image/png', sizes: '32x32' } },
+				{ tag: 'link', attrs: { rel: 'icon', href: 'https://uflinux.org/favicon.svg', type: 'image/svg+xml', sizes: 'any' } },
 				...fontAwesome,
 				{ tag: 'link', attrs: { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Ubuntu:wght@400;500;700&display=swap' } },
 				{ tag: 'link', attrs: { rel: 'sitemap', href: '/sitemap.xml' } },

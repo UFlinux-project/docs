@@ -66,7 +66,7 @@ GPL-3.0-only, matching the distribution.
 ## Shared website design
 
 The documentation follows the dark design of https://uflinux.org/, using Ubuntu typography
-and the live logo/favicon at https://uflinux.org/assets/logo.svg. Fonts load from Google
+and the live logo and favicons hosted at https://uflinux.org/. Fonts load from Google
 Fonts with system-font fallbacks. Header and footer links follow the selected locale.
 The navbar mirrors the main website’s dimensions, responsive navigation, and language menu.
 Search and mobile documentation controls sit in a separate toolbar. Both homepages show
