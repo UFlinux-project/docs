@@ -14,6 +14,7 @@ const czechPath = `/cs${englishPath === '/' ? '/' : englishPath}`;
       <a href={`${home}downloads/`}>{cs ? 'Ke stažení' : 'Downloads'}</a>
       <a href={`${home}guide/`}>{cs ? 'Začínáme' : 'Get started'}</a>
       <a href={cs ? '/cs/' : '/'} aria-current="page">{cs ? 'Dokumentace' : 'Documentation'}</a>
+      <a href={cs ? 'https://pkgs.uflinux.org/cs/' : 'https://pkgs.uflinux.org/'}>{cs ? 'Balíčky' : 'Packages'}</a>
     </nav>
     <div class="uf-language-switcher">
       <label class="uf-language-select">

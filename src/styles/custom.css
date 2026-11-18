@@ -35,7 +35,7 @@ a:focus-visible, button:focus-visible, select:focus-visible { outline: 3px solid
 .uf-global .uf-brand { flex: 0 0 140px; letter-spacing: normal; }
 .uf-wordmark { display: block; width: 96px; white-space: nowrap; letter-spacing: -.05em; }
 .uf-global .uf-brand img { display: block; object-fit: contain; flex: 0 0 35px; width: 35px; height: 35px; border-radius: 50%; }
-.uf-global nav { display: grid; grid-template-columns: 80px 90px 90px 140px; gap: 24px; flex-shrink: 0; margin-left: auto; font-size: .9rem; }
+.uf-global nav { display: flex; gap: 24px; flex-shrink: 0; margin-left: auto; font-size: .9rem; }
 .uf-global nav a { color: #bcbcbc; text-decoration: none; white-space: nowrap; line-height: normal; }
 .uf-global nav a[aria-current] { color: white; }
 .uf-global a:hover { color: #d1d1d1; }
@@ -53,24 +53,20 @@ a:focus-visible, button:focus-visible, select:focus-visible { outline: 3px solid
 .uf-toolbar { height: 52px; padding: 6px 48px; max-width: 1376px; margin: auto; display: flex; align-items: center; justify-content: space-between; gap: 1rem; border-top: 1px solid #3a3a3a; }
 .uf-toolbar > a { font-size: .65rem; letter-spacing: .17em; color: #bcbcbc; text-decoration: none; }
 .uf-toolbar site-search { width: min(100%, 28rem); }
-@media (max-width: 960px) {
+@media (max-width: 1060px) {
  :root, :root[data-theme='dark'] { --sl-nav-height: 164px; }
  .uf-global { height: 112px; display: grid; grid-template-columns: 1fr auto; grid-template-rows: 40px 26px; gap: 8px 12px; padding: 14px 24px; }
  .uf-global .uf-brand { width: 140px; }
  .uf-global .uf-brand img { flex-basis: 27px; width: 27px; height: 27px; }
- .uf-global nav { grid-column: 1 / -1; grid-row: 2; margin: 0; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 12px; font-size: .8rem; }
- .uf-global nav a:last-child { text-align: right; }
- .uf-global nav a:nth-child(2) { text-align: center; }
+ .uf-global nav { grid-column: 1 / -1; grid-row: 2; margin: 0; flex-wrap: wrap; gap: 14px 24px; font-size: .8rem; }
  .uf-language-switcher { justify-self: end; }
  .uf-language-select select { height: 38px; }
  .uf-toolbar { padding-inline: 24px; }
 }
 @media (max-width: 700px) { .uf-global .uf-brand { font-size: 1.3rem; } }
-@media (max-width: 480px) {
- :root, :root[data-theme='dark'] { --sl-nav-height: 198px; }
- .uf-global { height: 146px; grid-template-rows: 40px auto; }
- .uf-global nav { grid-template-columns: repeat(2,minmax(0,1fr)); row-gap: 14px; }
- .uf-global nav a, .uf-global nav a:nth-child(2), .uf-global nav a:last-child { text-align: left; }
+@media (max-width: 600px) {
+ :root, :root[data-theme='dark'] { --sl-nav-height: 226px; }
+ .uf-global { height: 174px; grid-template-rows: 40px auto; }
 }
 @media (max-width: 49.999em) {
  .uf-toolbar { padding-right: calc(24px + var(--sl-menu-button-size) + 16px); }
