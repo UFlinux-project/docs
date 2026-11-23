@@ -15,7 +15,8 @@ enabled, so ordinary Alpine packages work as usual.
 ## Is this released?
 
 Pre-release. The baseline is version `0.1.0` on Alpine 3.24. Only the x86_64 ISO has been
-boot-tested; device images are a preview. Read
+boot-tested; the six device images (`pc-f2fs`, `pc-xfs`, `qcs6490`, `rpi`, `spacemit-k1`,
+`vm`) are a preview. Read
 [Downloads and verification](./releases.md) before relying on it.
 
 ## Why XFS only?
@@ -55,7 +56,9 @@ enrolled. APK and modloop signatures are separate mechanisms and are unaffected.
 
 An installed system is developed and accepted at **512 MiB with one display and no swap**. A
 live image needs at least 4 GiB, because it unpacks the desktop and the full icon theme into
-a tmpfs root. See [Validation record](../developer/validation.md) for measured figures.
+a tmpfs root. Installed systems and device images additionally enable compressed swap; see
+[Memory compression](./memory-compression.md). See
+[Validation record](../developer/validation.md) for measured figures.
 
 ## Is GNOME or KDE required?
 
@@ -96,7 +99,7 @@ connect, disconnect or remove it. Private keys stay in the daemon and are never 
 
 Use the [issue tracker of the documentation repo](https://github.com/UFlinux-project/docs/issues)
 for anything wrong or missing on these pages, and
-[`UFlinux-project/uflinux3`](https://github.com/UFlinux-project/uflinux3) for the
+[`UFlinux-project/uflinux`](https://github.com/UFlinux-project/uflinux) for the
 distribution itself. See [Contributing](../developer/contributing.md).
 
 <UpstreamSource path="README.md" />

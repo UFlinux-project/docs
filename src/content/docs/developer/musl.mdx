@@ -1,0 +1,55 @@
+---
+title: UFLinux musl
+description: The replacement C library — why it is versioned 99., how mimalloc and BOLT are wired in, and how to roll back.
+source: docs/building.md
+---
+
+import UpstreamSource from '../../../components/UpstreamSource.astro';
+
+UFLinux ships its own musl build as the `musl` origin. `aports/musl` holds the APKBUILD and the
+UFLinux-only sources; the builder supplies the unchanged Alpine files from the pinned aports
+archive, so the recipe carries no duplicated Alpine patches.
+
+## Why the version starts with 99.
+
+The signed repository publishes the package set with a **`99.` version prefix** (`pkgver=99.1.2.6`
+for musl 1.2.6), so apk selects it during normal installs and upgrades instead of Alpine's lower
+version. The loader still reports the original musl version. Start a new UFLinux package revision
+whenever an input or a profile changes — the repository rejects changes to a package with an
+already published version.
+
+## What is in the library
+
+The shared and static libraries use **mimalloc 3.7.0 with `MI_SECURE=0` on all six targets**. The
+builder fetches the pinned mimalloc Git commit recorded in `config/sources.lock.json`, verifies
+the generated archive's checksum, and includes it in the offline rebuild inputs. The shared
+library is additionally rewritten with **BOLT on x86_64, aarch64 and riscv64**.
+
+## Recording and replaying a BOLT profile
+
+On an Ubuntu 26.04 build host, install `bolt-22` and `linux-tools-generic`. The RISC-V job
+additionally needs `qemu-system-misc`, `opensbi` and `cpio`. Build the shard and collect a fresh
+profile with:
+
+```sh
+sudo bash scripts/build.sh --arch x86_64 --stage packages --package musl --refresh-musl-bolt-profile
+```
+
+Use the native runner for aarch64 and the x86_64 runner for riscv64. The profiling command needs
+permission to use Linux perf events. The profile is saved in
+`out/package-shards/ARCH/musl/inputs/ARCH/musl-bolt-profiles.tar.gz`. Pass that archive as
+`--musl-bolt-profiles PATH` to reproduce the rewrite on an identical input ELF and BOLT version,
+or add it at `profiles/musl-bolt/ARCH.tar.gz` to make it the default for subsequent builds —
+without that archive, the package job records a fresh profile.
+
+When Alpine updates musl, refresh the pinned recipe and patches, update the upstream fields in
+`config/sources.lock.json`, and regenerate the BOLT profiles.
+
+## Rolling back
+
+To return to Alpine musl, disable the UFLinux repository temporarily and use `apk add` with
+explicit Alpine versions for `musl` **and every installed musl split package in one transaction**.
+Remove those version constraints before resuming normal Alpine updates. Re-enabling the UFLinux
+repository makes its `99.` packages eligible again.
+
+<UpstreamSource path="docs/building.md" />

@@ -21,6 +21,7 @@ labelled experimental is specific and worth understanding before you flash one.
 | Kernel | Nura `linux-postmarketos-qcom-sc7280` |
 | Boot | Board UEFI + `systemd-boot` |
 | Root filesystem | f2fs, label `UFLINUX_ROOT` |
+| Size | 6144 MiB uncompressed |
 | Status | Experimental |
 
 ## Why the kernel is not Alpine's
@@ -66,15 +67,40 @@ Two consequences you should know about:
   the kernel from unpacking the early userspace. `qcs6490` therefore sets
   `initramfs_compression: gzip` in `config/devices.json`; other boards default to
   Zstandard.
-- **Firmware for built-in drivers is listed explicitly.** The QUP I2C driver
-  (`i2c-qcom-geni`) is built into the kernel, probes while the initramfs is still running,
-  and asks for `qcom/qcm6490/qupv3fw.elf` before the root filesystem mounts — without it
-  the I2C bus feeding the HDMI bridge never appears. Boards list such files in
-  `initramfs_files`, and the profile passes them to mkinitfs as `custom_files`.
+- **Firmware for built-in drivers is listed explicitly.** mkinitfs collects firmware by
+  scanning the `.ko` files it copies in, so firmware wanted by a driver that is built into
+  the kernel has no `.ko` to declare it and would be left out. The QUP I2C driver
+  (`i2c-qcom-geni`) is built in, probes while the initramfs is still running, and asks for
+  `qcom/qcm6490/qupv3fw.elf` before the root filesystem mounts — without it the I2C bus
+  feeding the HDMI bridge never appears. Boards list such files in `initramfs_files`, and
+  the profile passes them to mkinitfs as `custom_files`.
+- **The Adreno GPU firmware is in the initramfs too.** The Adreno driver is built in as
+  well, so `a660_sqe.fw`, `a660_gmu.bin` and the board's `qcom/qcs6490/a660_zap.mbn` are on
+  the same list, carried as Zstandard-compressed files. Without them the kernel can report
+  `adreno_request_fw: failed to load a660_sqe.fw` before the root mounts, and rendering
+  startup may fail even though the text console works. That removes a known failure; an
+  accelerated graphical session still needs hardware verification. The reconstructed
+  initramfs was inspected and all four early firmware files were present and intact, but
+  that is archive-level evidence, not a board test.
+- **The module index is regenerated after the kernel is unpacked.** The profile always runs
+  `depmod -a` on it: the inspected Nura `7.0.8-r0` package ships a `modules.dep` whose
+  WireGuard entry has no prerequisites, although the module declares crypto and UDP-tunnel
+  ones. Regenerating restores the dependencies, so both mkinitfs and the installed `modprobe`
+  load the required modules first.
 - **Display modules are loaded from `/etc/modules`.** The whole HDMI chain is loadable
   modules — the Dragon Q6A's bridge is described in the device tree as `radxa,ra620`, which
   the generic `simple-bridge` driver claims — so the board lists them in
   `initramfs_modules` and the profile writes them into the initramfs.
+
+## Networking on the board
+
+Support depends on which interface you use:
+
+- The USB RTL8153 Ethernet device (`0bda:8153`) is driven by `r8152`, which needs the `mii`
+  module — another reason the dependency index is regenerated.
+- The onboard AIC USB Wi-Fi device (`a69c:8d80`) has **no matching driver** in the inspected
+  Nura 7.0.8 module package. Firmware or `iwd` alone does not supply a missing driver, so
+  onboard Wi-Fi is not supported by this image's kernel. Use an external adapter.
 
 ## Writing it
 

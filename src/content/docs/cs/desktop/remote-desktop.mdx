@@ -1,0 +1,121 @@
+---
+title: Vzdálená plocha
+description: Server vzdálené plochy postavený na IronRDP — soukromé relace pro jednotlivé uživatele, klient v prohlížeči, kodeky a jeho zapnutí.
+source: docs/settings.md
+---
+
+import UpstreamSource from '../../../../components/UpstreamSource.astro';
+
+UFLinux dodává server vzdálené plochy `uflinux-rds` postavený na
+[IronRDP](https://github.com/IronRDP/ironrdp). Je postavený podle Windows Remote Desktop
+Services: jeden broker, jedna soukromá relace na přihlášeného uživatele a žádná sdílená
+plocha. Každý připojený uživatel dostane vlastní headless kompozitor `labwc`, takže dva
+lidé na jednom stroji se navzájem do plochy nevidí ani si ji neovládají.
+
+**Ve výchozím stavu je vypnutý.** Než ho zapnete, nic neposlouchá na žádném portu, a když
+je zapnutý a nečinný, broker je jeden malý proces bez listenerů a bez podřízených procesů.
+Inicializace kodéru, kompozitor uživatele i stav relací webové brány vznikají až s prvním
+spojením a poslední odpojený klient je zase zničí.
+
+## Zapnutí
+
+Běžná cesta je stránka **Vzdálená plocha** v [Nastavení](./settings.md#remote-desktop):
+službu zapne i vypne a každá změna v ní jde přes polkit akci
+`org.uflinux.rds.configure`, takže ji může spravovat běžný uživatel pracovního prostředí.
+
+Z terminálu dělá totéž `uflinux-rdsctl`:
+
+```sh
+uflinux-rdsctl enable      # nastaví údaj enabled a přidá služinu do runlevelu boot
+uflinux-rdsctl status      # listenery a seznam relací
+uflinux-rdsctl sessions    # kdo je připojený
+uflinux-rdsctl disconnect SESSION_ID
+```
+
+`start` a `stop` žádají běžícího brokera, aby otevřel nebo zavřel listenery, a fungují i bez
+roota; pokud žádný broker neodpovídá, spadnou zpět na `rc-service uflinux-rds`, kde root
+třeba je. `enable` a `disable` vždy potřebují roota, protože přepínají obě poloviny hlavního
+vypínače — výchozí runlevel i údaj `enabled` v konfiguračním souboru. Spuštění vypnuté
+služby se odmítne: nejdřív ji povolte.
+
+## Konfigurace
+
+Jediným konfiguračním souborem je `/etc/uflinux/rds.json`, který upravuje právě stránka v
+Nastavení. Několik běžných hodnot lze zadat i v shell syntaxi v `/etc/conf.d/uflinux-rds`.
+
+| Skupina | Klíče |
+| --- | --- |
+| Služba | `enabled`, `rdp_port`, `rdp_bind` |
+| Přístup | `allowed_users`, `allowed_groups`, `max_sessions`, `idle_timeout_secs`, `session_command` |
+| Kodek | `codec.h264` (`auto`/`force`/`off`), `codec.allow_remotefx`, `codec.rfx_quant`, `codec.max_fps`, `codec.vaapi_device` |
+| Web | `web.enabled`, `web.port`, `web.bind`, `web.https`, `web.certificate`, `web.token_ttl_minutes` |
+
+Nativní klienti musí povolovat zabezpečení TLS. NLA vyžadovat nelze, protože PAM backend
+nepodporuje CredSSP.
+
+Změnu lze použít bez restartu a živé relace přitom zůstanou naživu:
+
+```sh
+uflinux-rdsctl apply /etc/uflinux/rds.json
+```
+
+Konfigurace, v níž se změnil `enabled`, zároveň spustí nebo zastaví listenery — to slibuje
+přepínač v Nastavení — kdežto jakékoli jiné pole se převezme bez rušení běžící služby.
+
+## Kodeky
+
+`codec.h264 = "auto"` dává přednost hardwarovému kodéru a vrací se na softwarový OpenH264 a
+pak na RemoteFX nebo obyčejné bitmapové aktualizace podle toho, na čem se klient domluvil.
+Hardwarové kódování spouští `ffmpeg -c:v h264_vaapi` **mimo proces**, takže pád ovladače
+srazí jeden kodér místo relace; potřebuje volitelný balíček `uflinux-rds-vaapi`. `force` u
+nativních spojení vyžaduje podporu AVC a kodér, a `off` H.264 zcela vypíná.
+
+H.264 je pro nativní klienty jako mstsc, FreeRDP nebo Remmina. **Klienti v prohlížeči
+vždy dostávají QOI nebo RemoteFX**, protože žádný prohlížeč kanál RDP s H.264 nedekóduje.
+
+Klienti, kteří vyjednávají CLIPRDR, mohou vyměňovat prostý unicode text se schránkou vzdálené
+plochy. Nativní klienti mohou přes RDPSND také slyšet zvuk ze soukromého výstupu PipeWire
+vzdálené plochy; klient v prohlížeči má textovou schránku, ale zvuk ne.
+
+Klienti s RDP Display Control mohou měnit rozlišení jediného headless výstupu relace za běhu
+a konzole v prohlížeči požádá o nové rozlišení, když se změní její viewport. Rozměry zůstávají
+v inzerovaném rozpočtu pixelů a pro H.264 používají sudé hodnoty.
+
+## Klient v prohlížeči
+
+`uflinux-rds-web` vydává přihlašovací stránku a wasm klienta na portu **3390**, ve výchozím
+stavu přes HTTPS. Je to samostatný program, takže vypnutí webové brány odstraní i její
+listener. Stránku lze úplně vypnout, přepnout na čisté HTTP, nebo jí dát vlastní certifikát
+místo samopodepsaného, který si při prvním použití vygeneruje.
+
+Přihlašovací formulář se odešle na bránu, ta ověří heslo touž PAM službou, vydá krátkodobý
+jednorázový token a předá prohlížeči stránku konzole. Ta otevře WebSocket a pohání stejného
+wasm klienta, jakého používá nativní spojení, takže prohlížeč mluví skutečným RDP. Na serveru
+nezůstává o relaci nic víc než ten token.
+
+Brána nedialuje veřejný RDP port. Každý WebSocket přenáší do soukromého unix socketu brokera,
+a protože tato část cesty už je šifrovaná, vnitřní handshake TLS se přeskočí — jinak by
+prohlížeč, který považuje spojení za zabezpečené, našel uvnitř druhý handshake.
+
+## Co relace stojí
+
+Relace je skutečná plocha: kompozitor, dbus session bus a všechno z běžného autostartu.
+Nečinná relace zcela přestane kódovat, a když klient odejde, plocha se zničí místo aby
+běžela dál — opětovné připojení začne novou relaci. Klient, který se neozve déle než
+`idle_timeout_secs`, se odpojí.
+
+## Balíčky
+
+| Balíček | Obsah |
+| --- | --- |
+| `uflinux-rds` | Broker, `uflinux-rdsctl`, `/etc/uflinux/rds.json`, služba OpenRC, data PAM a D-Bus/polkit |
+| `uflinux-rds-server` | Hostitel relace pro jedno spojení |
+| `uflinux-rds-web` | Webová brána se zabudovaným přeloženým wasm klientem |
+| `uflinux-rds-system` | Autorizovaný pomocník, jeho služba D-Bus a pravidla polkit |
+| `uflinux-rds-vaapi` | `ffmpeg`, `openh264` a `libva` pro hardwarové H.264 |
+
+Meta balíček pracovního prostředí táhne `uflinux-rds` a `uflinux-rds-vaapi`, takže binárky
+na nainstalovaném systému už jsou; `uflinux-rds-vaapi` je samostatný, aby stroj, který
+vzdálenou plochu nikdy nezapne, mohl být bez něj.
+
+<UpstreamSource path="docs/settings.md" />

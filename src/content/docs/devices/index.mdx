@@ -1,15 +1,17 @@
 ---
 title: Device images
-description: Installed GPT disk images for Raspberry Pi, QCS6490 and SpacemiT K1 boards, and virtual machines.
+description: Installed GPT disk images for PCs, Raspberry Pi, QCS6490 and SpacemiT K1 boards, and
+  virtual machines.
 source: docs/device-images.md
 ---
 
 import UpstreamSource from '../../../components/UpstreamSource.astro';
 
 Besides the generic live ISOs, UFLinux builds **installed** GPT disk images for specific
-boards. A device image is written straight to the board's SD card or eMMC, boots to the
-login screen, and grows its root partition to the size of the media on first boot. There is
-no squashfs modloop, no `live` user, and no live session.
+machines and boards. A device image is written straight to the disk, SD card or eMMC, boots
+to the login screen, and uses an installed root filesystem. Every image expands to fill the
+storage medium on first boot: XFS images online, F2FS images offline in the initramfs. There
+is no squashfs modloop, no `live` user, and no live session.
 
 Device images are **supplementary**. They are built on version tags and attached to the
 same release as the ISOs, but a failing or missing image never blocks publication of the
@@ -18,16 +20,29 @@ Treat them as a preview.
 
 ## Targets
 
-| Id | Boards | Architecture | Kernel | Boot | Root fs | Status |
+| Id | Machines and boards | Architecture | Kernel | Boot | Root fs | Status |
 | --- | --- | --- | --- | --- | --- | --- |
+| `pc-xfs` | PCs with a hard drive or SSD | x86_64, x86 | `linux-lts` | BIOS syslinux + UEFI systemd-boot | XFS | Supported |
+| `pc-f2fs` | PCs booted from a flash drive or SD card | x86_64 | `linux-lts` | BIOS syslinux + UEFI systemd-boot | f2fs (lz4) | Supported |
 | `rpi` | Raspberry Pi 3, 4 and 5 | aarch64 | `linux-rpi` | VideoCore firmware | f2fs | Supported |
 | `vm` | QEMU, KVM and other hypervisors | x86_64, aarch64 | `linux-virt` | UEFI + systemd-boot | XFS | Supported |
 | `qcs6490` | Arrow Dragon Q6A and similar | aarch64 | Nura `linux-postmarketos-qcom-sc7280` | board UEFI + systemd-boot | f2fs | Experimental |
 | `spacemit-k1` | Orange Pi RV2, Orange Pi R2S, BananaPi-F3 | riscv64 | `linux-lts` | U-Boot distro boot | f2fs | Experimental |
 
-f2fs is used on the single-board targets because it is built for the wear-levelling and
-small-write behaviour of SD cards and eMMC. The `vm` image uses XFS, the same filesystem as
-an installed ISO system, since a virtual disk has none of those constraints.
+The two `pc-*` targets are not boards but machines: they write to an internal disk or to a
+USB stick and boot on any x86 firmware, so they are the only images that carry a BIOS and a
+UEFI boot chain on the same disk. See [PCs](./pc.md).
+
+f2fs is used on the single-board targets and on `pc-f2fs` because it is built for the
+wear-levelling and small-write behaviour of SD cards, eMMC and USB flash drives. The `vm`
+and `pc-xfs` images use XFS, the same filesystem as an installed ISO system, since a hard
+drive, SSD or virtual disk has none of those constraints.
+
+Every image carries Alpine's `linux-firmware` subpackages **except** `linux-firmware-qcom`
+and `linux-firmware-none` (`config/firmware-packages.txt`). The 163 MiB of Qualcomm board
+blobs ship only in the `qcs6490` image, which names the package itself. Qualcomm M.2 Wi-Fi
+and Bluetooth are unaffected — their firmware is in the `ath10k`, `ath11k`, `ath12k`, `qca`
+and `ar3k` subpackages, which are all included.
 
 ## Disk layout
 
@@ -36,17 +51,21 @@ Every image has the same two-partition GPT layout:
 | Partition | Start (512 B sectors) | Size | Filesystem |
 | --- | --- | --- | --- |
 | ESP | 2048 | 512 MiB | FAT32, label `UFLINUX` |
-| ROOT | 1050624 | rest of the disk | f2fs on boards, XFS on `vm`, label `UFLINUX_ROOT` |
+| ROOT | 1050624 | rest of the disk | f2fs on boards and `pc-f2fs`, XFS on `vm` and `pc-xfs`, label `UFLINUX_ROOT` |
 
-The uncompressed image is 6144 MiB (5120 MiB for `vm`), so any larger card works and the
-root partition grows to fill it. Disk, partition and FAT volume identifiers are derived
-from the version, board id and architecture, so a rebuild produces the same GUIDs.
+The uncompressed image is 6144 MiB — 5120 MiB for `vm`, 4096 MiB for the `pc-*` images — so
+any larger card, eMMC or disk works and the root partition grows to fill it. Disk, partition
+and FAT volume identifiers are derived from the version, board id and architecture, so a
+rebuild produces the same GUIDs.
 
 The kernel command line uses `root=UUID=<ROOT filesystem UUID> rootwait rootfstype=<fs>
 rootflags=ro`. The formatters set the filesystem UUID to the root partition GUID too, and
 Alpine's initramfs passes root to BusyBox `mount`, which resolves filesystem `UUID=` and
 `LABEL=` but not `PARTUUID=`. The explicit type means the initramfs carries only the one
-filesystem module it needs.
+filesystem module it needs. A target that wants F2FS cluster compression — `pc-f2fs` asks
+for lz4 — adds `compress_algorithm=<algo>,compress_mode=fs` to those flags, and `mkfs.f2fs`
+is given `-O compression,extra_attr` to match; the kernel refuses the mount option unless
+both are present in the superblock, and the build verifies that it is.
 
 ## Writing an image
 
@@ -59,7 +78,7 @@ Verify the checksum sidecar first:
 
 ```sh
 sha256sum -c uflinux-0.1.0-rpi-aarch64.img.zst.sha256
-gh attestation verify uflinux-0.1.0-rpi-aarch64.img.zst --repo UFlinux-project/uflinux3
+gh attestation verify uflinux-0.1.0-rpi-aarch64.img.zst --repo UFlinux-project/uflinux
 ```
 
 Images are published with Zstandard level 12 compression. See
@@ -81,22 +100,51 @@ passwd
 graphically. Serial gettys are configured per board (`ttyMSM0`, `ttyAMA0` or `ttyS0` at
 115200 8n1) in addition to `tty1` and `tty2`.
 
+The desktop package also installs `util-linux-login`, whose PAM-enabled `/bin/login`
+replaces the BusyBox login applet. A fresh local TTY login therefore gets an elogind
+session and `XDG_RUNTIME_DIR`, so from a serial console you can log in as `user`, stop
+greetd if needed, and run `uflinux-session` without sudo. Installing the package while
+already logged in means logging out and back in — it does not retrofit the current shell's
+session. Don't replace this with a shared runtime directory or a hand-exported `/tmp` path.
+
 ## First boot: the root partition grows
 
-The `uflinux-device` OpenRC service — from the `uflinux-device` package, published in the
-release repository but not bundled in the live ISO — runs early in the `boot` runlevel,
-after filesystem checks and before the root remount and `localmount`. It does nothing
-unless `/etc/uflinux/device` exists — which a device image writes with the board id — so it
-is inert on an ordinary installed system.
+Before the image is formatted, the rootfs snapshot drops the build-time contents of `/dev`,
+`/proc`, `/sys` and `/run` and recreates those directories empty at mode 0755. They have to
+exist when the initramfs mounts the root read-only: Alpine moves its runtime mounts there
+before `switch_root` and cannot create missing directories on a read-only filesystem, and
+without them OpenRC loses its device nodes and kernel interfaces.
 
-When armed, it runs `growpart` on the root partition **once** and grows the filesystem to
-fill it, then records `/var/lib/uflinux/device-resized`. A later manual partition change is
-therefore not undone, and a reboot does not repeat the work. Failures are warnings, not
-boot failures.
+**XFS and ext4 roots grow online.** The `uflinux-device` OpenRC service — from the
+`uflinux-device` package, published in the release repository but not bundled in the live
+ISO — runs early in the `boot` runlevel, after filesystem checks and before the root remount
+and `localmount`. It does nothing unless `/etc/uflinux/device` exists — which a device image
+writes with the board id — so it is inert on an ordinary installed system. When armed, it
+runs `growpart` on the root partition **once**, then `xfs_growfs /` or `resize2fs`, and
+records `/var/lib/uflinux/device-resized`. A later manual partition change is therefore not
+undone, and a reboot does not repeat the work. Failures are warnings, not boot failures.
 
-One quirk: an f2fs root is grown in place while mounted read-only — the only way the kernel
-allows — but the kernel does not re-read the superblock on remount, so the new space shows
-in `df` only after the next reboot. The full size is already usable for writes.
+**F2FS roots grow offline, in the initramfs.** `resize.f2fs` rewrites on-disk metadata
+directly, and running it on a mounted root — even read-only, then remounted writable — can
+leave the kernel using stale metadata. The initramfs is the only point in the boot where the
+root is guaranteed to be unmounted, so it runs
+`/usr/libexec/uflinux-initramfs-resize` after the storage devices have been located and
+before the root is mounted: `growpart` on the root partition, then `resize.f2fs -F`. The
+work belongs to the `uflinux-f2fs-resize` mkinitfs feature, which the device profile enables
+for F2FS roots and which carries `growpart`, `sfdisk`, `partx` and `resize.f2fs` into the
+initramfs. The hook is best-effort and never aborts the boot; a card of the image's own
+size, or a second boot after a successful growth, is a no-op. The first-boot service then
+only records `/var/lib/uflinux/device-resized` for an F2FS root so the check is not
+repeated.
+
+A reported reboot failure (`SIT is corrupted`, `Failed to initialize F2FS segment manager`,
+`Data consistency error`) indicates damage that was already there. The offline resize
+removes the unsafe online operation; it does not repair a damaged card. Preserve your data
+before running an offline `fsck.f2fs` or reflashing.
+
+Device images also enable `uflinux-zram`, which sizes compressed swap from the memory the
+board actually has and picks the compressor from its CPU: an LZ4 zram device, plus a
+`dd`-written `/swapfile` and zswap once the board has more than 4 GiB.
 
 ## Updates on a board
 
@@ -123,10 +171,10 @@ the live Alpine and pinned Nura indexes.
 On real hardware, the evidence is thinner. The `qcs6490` image has been booted on an Arrow
 Dragon Q6A from a USB stick: the firmware reached `systemd-boot` and the entry loaded, but
 with Alpine's `linux-lts` the HDMI output stayed black — which is what prompted the switch
-to the Nura mainline kernel. The other images have not been booted on physical hardware,
-and none is covered by the QEMU boot tests that the ISOs get.
+to the Nura mainline kernel. The other images, including both PC images, have not been
+booted on physical hardware, and none is covered by the QEMU boot tests that the ISOs get.
 
-That is why two of the four targets are labelled experimental and why release notes
-describe device images as a preview.
+That is why two of the six targets are labelled experimental and why release notes describe
+device images as a preview.
 
 <UpstreamSource path="docs/device-images.md" />

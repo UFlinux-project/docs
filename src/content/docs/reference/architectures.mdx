@@ -32,13 +32,17 @@ firmware modes — the gate asks only for the boot tests that actually run.
 
 | Board id | Package build | Boot firmware | Status |
 | --- | --- | --- | --- |
+| `pc-f2fs` | native x86_64 runner | BIOS `syslinux` and UEFI `systemd-boot` | supported |
+| `pc-xfs` | native x86_64 and x86 runners | BIOS `syslinux` and UEFI `systemd-boot` | supported |
 | `rpi` | native ARM64 runner | VideoCore firmware with `config.txt` | supported |
 | `vm` | native x86_64 and ARM64 runners | UEFI with `systemd-boot` | supported |
 | `qcs6490` | native ARM64 runner | board UEFI plus `systemd-boot` | experimental |
 | `spacemit-k1` | qemu-riscv64 | U-Boot distro boot with `extlinux` | experimental |
 
-Device images are supplementary: built on tags and attached to the release, but not part of
-the publication gate, and none has a configured boot test. See
+The two `pc-*` targets are not boards but machines: they write to an internal disk or a USB
+stick, boot on any x86 firmware, and are the only images carrying a BIOS and a UEFI boot chain
+on the same disk. Device images are supplementary: built on tags and attached to the release,
+but not part of the publication gate, and none has a configured boot test. See
 [Device images](../devices/index.md).
 
 ## What "supported architecture" does not mean
@@ -50,8 +54,9 @@ certification.
   Generic ARM ISOs need appropriate firmware and do not replace Alpine's board-specific
   Raspberry Pi tarballs.
 - Mainframes commonly lack a local display. UFLinux provides a serial console, and the
-  desktop can be tested with a headless Wayland backend. No remote-desktop service is
-  enabled by default.
+  desktop can be tested with a headless Wayland backend. A remote-desktop server ships in the
+  image but is **disabled by default**, so nothing listens on any port until you enable it —
+  see [Remote Desktop](../desktop/remote-desktop.md).
 - UEFI tests run with Secure Boot **disabled**. These images do not provide enrolled UEFI
   Secure Boot signatures; APK and modloop signatures are separate mechanisms.
 - The graphical stack uses packaged Mesa and Alpine kernels and firmware. Physical GPU,

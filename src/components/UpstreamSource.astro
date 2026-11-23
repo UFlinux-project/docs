@@ -1,18 +1,18 @@
 ---
 interface Props {
-	/** Path inside https://github.com/UFlinux-project/uflinux3, e.g. `docs/installing.md`. */
+	/** Path inside https://github.com/UFlinux-project/uflinux, e.g. `docs/installing.md`. */
 	path: string;
 	/** Commit the wording was checked against. */
 	commit?: string;
 }
 
-const { path, commit = 'b4f4817' } = Astro.props;
-const url = `https://github.com/UFlinux-project/uflinux3/blob/${commit}/${path}`;
+const { path, commit = '17eb14c' } = Astro.props;
+const url = `https://github.com/UFlinux-project/uflinux/blob/${commit}/${path}`;
 ---
 
 <p class="upstream-source">
 	Derived from <a href={url}><code>{path}</code></a> in
-	<a href="https://github.com/UFlinux-project/uflinux3">UFlinux-project/uflinux3</a>
+	<a href="https://github.com/UFlinux-project/uflinux">UFlinux-project/uflinux</a>
 	<code class="commit">({commit})</code>. Report documentation problems in
 	<a href="https://github.com/UFlinux-project/docs/issues">UFlinux-project/docs</a>.
 </p>

@@ -1,0 +1,56 @@
+---
+title: UFLinux musl
+description: Nahradná C knihovna — proč má verzi začínající 99., jak je v ní mimalloc a BOLT a jak se vrátit zpět.
+source: docs/building.md
+---
+
+import UpstreamSource from '../../../../components/UpstreamSource.astro';
+
+UFLinux dodává vlastní build muslu jako origin `musl`. `aports/musl` obsahuje APKBUILD a
+soubory, které jsou jen pro UFLinux; builder doplní nezměněné soubory z Alpine z připnutého
+archivu aports, takže recept neobsahuje zdvojené alpine záplaty.
+
+## Proč verze začíná na 99.
+
+Podepsaný repozitář zveřejňuje sadu balíčků s **prefixem verze `99.`**
+(`pkgver=99.1.2.6` pro musl 1.2.6), takže apk při běžných instalacích a aktualizacích
+vybere ji místo nižší verze z Alpine. Loader ale pořád hlásí původní verzi muslu. Pokaždé,
+když se změní vstup nebo profil, začněte novou revizi balíčku UFLinuxu — repozitář
+odmítá změny balíčku už publikované verze.
+
+## Co knihovna obsahuje
+
+Sdílená i statická knihovna používají **mimalloc 3.7.0 s `MI_SECURE=0` na všech šesti
+cílích**. Builder stáhne připnutý commit mimallocu zaznamenaný v
+`config/sources.lock.json`, ověří checksum vygenerovaného archivu a zahrne ho mezi vstupy
+pro rebuild bez sítě. Sdílená knihovna se navíc přepíše **BOLTem na x86_64, aarch64 a
+riscv64**.
+
+## Nahrát BOLT profil a znovu ho přehrát
+
+Na buildovacím stroji s Ubuntu 26.04 nainstalujte `bolt-22` a `linux-tools-generic`.
+Job pro RISC-V navíc potřebuje `qemu-system-misc`, `opensbi` a `cpio`. Shard sestavte a
+čerstvý profil seberte příkazem:
+
+```sh
+sudo bash scripts/build.sh --arch x86_64 --stage packages --package musl --refresh-musl-bolt-profile
+```
+
+Pro aarch64 použijte nativní runner a pro riscv64 runner x86_64. Profiling příkaz potřebuje
+oprávnění používat Linux perf events. Profil se uloží do
+`out/package-shards/ARCH/musl/inputs/ARCH/musl-bolt-profiles.tar.gz`. Ten archiv předejte
+jako `--musl-bolt-profiles PATH`, abyste přepsání zopakovali na totožném vstupním ELF i
+verzi BOLTu, nebo ho přidejte na `profiles/musl-bolt/ARCH.tar.gz`, aby se stal výchozím pro
+další buildy — bez toho archivu job pro balíček nahraje profil nový.
+
+Až Alpine aktualizuje musl, osvěžte připnutý recept a záplaty, aktualizujte upstream pole v
+`config/sources.lock.json` a vygenerujte BOLT profily znovu.
+
+## Návrat zpět
+
+Alpine musl vrátíte tak, že dočasně vypnete repozitář UFLinuxu a použijete `apk add`
+s explicitními verzemi z Alpine pro `musl` **a všechny nainstalované subbalíčky muslu v
+jedné transakci**. Tyto verzní konstrainty před dalším běžným aktualizováním z Alpine
+odeberte. Znovu povolení repozitáře UFLinuxu učiní jeho `99.` balíčky znovu dostupnými.
+
+<UpstreamSource path="docs/building.md" />

@@ -1,0 +1,100 @@
+---
+title: Komprese paměti
+description: Jak UFLinux nastavuje komprimovaný swap — zram a zswap autodetekované podle
+  velikosti paměti a CPU, a jak je přenastavit.
+source: docs/memory-compression.md
+---
+
+import UpstreamSource from '../../../../components/UpstreamSource.astro';
+
+UFLinux komprimuje vyměňovanou paměť vlastními mechanismy kernelu: **zram** je komprimované
+blokové zařízení v RAM používané jako swap a **zswap** je komprimovaná cache před reálným
+swap zařízením. Obojí nastavuje služba OpenRC `uflinux-zram`, která se dodává v balíčku
+`uflinux` a je v installed systémech i obrazech pro zařízení povolená v runlevelu `boot`.
+Live session balíček nainstaluje, ale nepovolí, takže live systém zůstává u referenčního
+případu 512 MiB bez swapu.
+
+Nic se nečte z tabulky desek. Služba se podívá na stroj, na kterém běží, a autodetekuje tři
+věci:
+
+| Vstup | Zdroj | Rozhoduje o |
+| --- | --- | --- |
+| Velikost paměti | `MemTotal` v `/proc/meminfo` | rozložení a všechny velikosti |
+| Třída CPU | `uname -m` plus počet online procesorů | kompresor |
+| Souborový systém pod `/` | `/proc/mounts` | jak se vytvoří swapfile |
+
+## Které rozložení
+
+Při velikosti do `RAM_SPLIT_MIB` (výchozí 4 GiB) služba nastaví jen zram s prioritou 100 a
+zswap nechá **vypnutý** — komprimovaná cache před komprimovaným zařízením by tu samou
+stránku komprimovala dvakrát. Nad hranicí nastaví zram *a* `/swapfile` s prioritou 10 a zswap
+zapne, takže stránky mířící do souboru se nejdřív zkomprimují a zapisují se až když je cache
+plná.
+
+## Který kompresor
+
+LZ4 na `armv7`, `armv6`, `armv8l`, `riscv32`, `riscv64` a `mips`, nebo na jakémkoli CPU se
+dvěma jádry či méně. Zstandard všude jinde. LZ4 vyhrává tam, kde je jader málo, protože
+na stránku potřebuje mnohem méně práce; Zstandard dává lepší poměr tam, kde jádra přebývají.
+Oba backendy jsou zabudované v kernelech, které UFLinux dodává, takže volba je vždy
+dostupná, a `ZRAM_COMP` / `ZSWAP_COMP` ji přepíšou přímo.
+
+## Velikosti
+
+Každá velikost se odvozuje od velikosti paměti a je omezená hranicemi, takže deska s 1 GiB
+i stroj s 64 GiB dostanou rozumnou hodnotu:
+
+| Hodnota | Vzorec | Meze |
+| --- | --- | --- |
+| `disksize` zramu | RAM / 2 | 256 MiB – 2 GiB |
+| `mem_limit` zramu | RAM / 4 | 64 MiB – 1 GiB |
+| `/swapfile` | RAM / 2 | 2 GiB – 8 GiB |
+| `max_pool_percent` zswapu | pevná | 20 |
+| `accept_threshold_percent` zswapu | pevná | 70 |
+
+`mem_limit` je to, co omezuje paměť, kterou zram skutečně spotřebuje: jakmile je dosažen,
+další zápisy selžou místo aby systém stáhly ještě hlouběji do tlaku na paměť.
+`max_pool_percent` hraje stejnou roli pro zswap.
+
+## Swapfile
+
+Stroj s více než 4 GiB dostane `/swapfile`, protože žádný obraz UFLinuxu nevytváří swap
+oddíl. Služba soubor jednou vytvoří, označí ho `0600`, spustí `mkswap -L uflinux-swap` a
+povolí ho s nižší prioritou, aby se vždy nejdřív zaplnil zram.
+
+Používá `fallocate` na ext4, XFS a btrfs a `dd` na **F2FS** — kořenovém souborovém systému
+obrazů pro desky a pro `pc-f2fs` — stejně jako na jakémkoli souborovém systému, který
+z `/proc/mounts` nepozná. Swap soubor nesmí obsahovat díry a F2FS hlásí díru jako tvrdé
+`-EINVAL`, když se ji kernel pokusí použít, proto je tam pomalejší předalokace správná
+volba.
+
+## Jak to přenastavit
+
+Každá hodnota žije v `/etc/conf.d/uflinux-zram`, zakomentovaná a ve výchozím nastavení:
+`RAM_SPLIT_MIB`, `ZRAM_COMP`, `ZRAM_DISKSIZE`, `ZRAM_MEM_LIMIT`, `SWAPFILE`, `SWAPFILE_MIB`,
+`ZSWAP_COMP`, `ZSWAP_MAX_POOL_PERCENT`, `ZSWAP_ACCEPT_THRESHOLD_PERCENT`. Odkomentování
+hodnoty nahradí tu autodetekovanou, včetně kompresoru. Změna se aplikuje:
+
+```sh
+rc-service uflinux-zram restart
+```
+
+## Když se něco nepovede
+
+Jako neúspěšný start se počítá jen stroj, který nedokáže vytvořit zram zařízení vůbec.
+Chybějící modul zswapu, odmítnutý kompresor ani swapfile, který se nepodařilo vytvořit nebo
+povolit, stojí vždy jednu vrstvu a hlásí se jako varování, takže deska bez zswapu v kernelu
+stále nastartuje s komprimovaným swapem a na řádku v boot logu `warn …` místo selhání
+služby.
+
+`stop` a `shutdown` swap vypnou zařízení, která služba vytvořila, a zresetují zram zařízení,
+takže restart nezanechá zařízení navíc.
+
+Politiku kontroluje `tests/test_zram_policy.py`, který pouští skutečné `start()` proti
+falešnému `/proc` a falešnému sysfs: malá deska se slabým CPU dostane jen LZ4 zram, velká
+deska dostane Zstandard zram plus swapfile plus zswap, kořen na F2FS dostane swapfile
+zapsaný přes `dd`, hodnoty z `conf.d` vyhrávají, chybějící zswap stojí jen druhou vrstvu a
+stroj bez zramu selže. Související test kontroluje hrany `depend()` služby proti grafu
+initovacích a bootovacích závislostí samotného Alpine.
+
+<UpstreamSource path="docs/memory-compression.md" />

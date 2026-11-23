@@ -1,0 +1,120 @@
+---
+title: PCs
+description: The preinstalled UFLinux disk images for x86 machines, with BIOS and UEFI boot on
+  one disk.
+status: Supported
+source: docs/device-images.md
+---
+
+import UpstreamSource from '../../../components/UpstreamSource.astro';
+
+The two `pc-*` images are UFLinux written straight onto a PC's storage: no live session and
+no installer — you flash the image, boot it, and log in. They are the only device targets
+that are not boards, and the only ones that carry a BIOS and a UEFI boot chain on the same
+disk.
+
+## What they are
+
+| | `pc-xfs` | `pc-f2fs` |
+| --- | --- | --- |
+| For | PCs with a hard drive or SSD | PCs booted from a flash drive or SD card |
+| Architecture | x86_64 and x86 | x86_64 |
+| Kernel | Alpine `linux-lts` | Alpine `linux-lts` |
+| Boot | BIOS `syslinux` + UEFI `systemd-boot` | BIOS `syslinux` + UEFI `systemd-boot` |
+| Root filesystem | XFS, label `UFLINUX_ROOT` | f2fs with lz4 cluster compression |
+| Size | 4096 MiB uncompressed | 4096 MiB uncompressed |
+| Status | Supported | Supported |
+
+Both are labelled supported because they are part of the regular release matrix and are not
+marked experimental. Neither has been booted on a physical machine yet, and neither is
+covered by the automated boot tests — see [Device images](./index.md#how-solid-is-this).
+
+## One disk, both firmware classes
+
+A PC image has to boot on whatever firmware the machine happens to have, so the ESP carries
+two independent boot chains:
+
+- **UEFI** uses the removable-media layout: `EFI/boot/bootx64.efi` (or `bootia32.efi` on the
+  32-bit image), `loader/loader.conf`, and `loader/entries/uflinux.conf`. Nothing is written
+  to the firmware's boot variables, so no NVRAM entry has to exist and the same disk boots
+  in any machine — including one that has forgotten the entry it once had.
+- **BIOS** uses `syslinux`: `gptmbr.bin` occupies the first 440 bytes of the disk and
+  chainloads `ldlinux.sys` in the ESP, which reads `syslinux.cfg`. Three things are needed
+  for that to work and the build verifies all three: the ESP partition carries the GPT
+  `LegacyBIOSBootable` attribute (`sfdisk`'s plain `bootable` keyword only sets the MBR boot
+  indicator, and `gptmbr.bin` then prints a bare `Boot failed`), `ldlinux.sys` and
+  `ldlinux.c32` are present, and `libcom32.c32` and `libutil.c32` sit next to them.
+
+Both images ship `amd-ucode` and `intel-ucode` and pass both microcode images to both
+bootloaders, so the CPU microcode is loaded before the kernel starts on either firmware.
+
+The `syslinux` package normally installs a trigger that runs `update-extlinux` on every
+kernel transaction and rewrites the bootloader configuration it finds on the mounted ESP.
+The PC profiles set `disable_trigger=1` in `/etc/update-extlinux.conf`, because the image
+generates `syslinux.cfg` once and owns it — otherwise the distro helper would fight it on
+every package update.
+
+## Choosing between the two
+
+`pc-xfs` uses XFS, the same filesystem as an installed ISO system: a hard drive or SSD has
+none of the constraints f2fs exists to serve.
+
+`pc-f2fs` is for the USB stick or SD card that has to survive thousands of small writes, and
+asks the kernel for F2FS's lz4 cluster compression (`compress_algorithm=lz4,compress_mode=fs`
+on the mount line, with the matching feature bits in the superblock — the build checks that
+the formatter really set them).
+
+`pc-f2fs` is built for x86_64 only. i386 PCs are rare enough that one 32-bit image
+(`pc-xfs`) covers the architecture, and every extra image costs a whole job in the release
+matrix.
+
+## Writing it
+
+```sh
+IMG=uflinux-0.1.0-pc-xfs-x86_64.img.zst
+zstd -d < $IMG | sudo dd of=/dev/sda bs=8M oflag=direct status=progress
+sync
+```
+
+The uncompressed image is 4096 MiB, so any larger drive, SSD or stick works. The root
+partition expands to fill it on first boot: XFS online through the first-boot service, F2FS
+offline in the initramfs. See
+[First boot](./index.md#first-boot-the-root-partition-grows) for how each one works and what
+a failure looks like.
+
+Log in as **user / user** — the same account every device image ships — on the display or on
+the `ttyS0` serial console at 115200 8n1, and use `sudo` or `doas` with that password for
+administrative commands. The greeter is enabled, so the account can log in graphically.
+
+## What is in the image
+
+The package set is the desktop meta plus `linux-lts`, `systemd-boot`, `syslinux`,
+`amd-ucode`, `intel-ucode`, and the Mesa Vulkan drivers for Intel, NVIDIA and virtio GPUs.
+
+Firmware is Alpine's `linux-firmware` subpackages **except** `linux-firmware-qcom` and
+`linux-firmware-none` — the 163 MiB of Snapdragon board blobs no PC needs. Qualcomm M.2
+Wi-Fi and Bluetooth still work: their firmware is in the `ath10k`, `ath11k`, `ath12k`,
+`qca` and `ar3k` subpackages, which are included.
+
+## When to use a PC image instead of the ISO
+
+The installable ISO is the tested artifact: the x86_64 ISO is the one CI boots, on every
+commit, and its installer lets you choose the layout and set up your own account. Reach for
+a PC image instead when:
+
+- you want to provision a machine from a script or a bench station rather than answer
+  installer questions;
+- the system lives on a flash drive or SD card, where `pc-f2fs` is the better filesystem;
+- you want a re-flashable golden image: a known-good disk state you can put back on a
+  machine in one `dd` rather than reinstall.
+
+The trade-off is that a device image is a fixed layout — one ESP and one root — and it is
+supplementary: a broken image never blocks a release, and it is not boot-tested.
+
+## Secure Boot
+
+UEFI boot works, but these images do not provide enrolled UEFI Secure Boot signatures. Boot
+with Secure Boot disabled. APK and modloop signatures are separate mechanisms and are
+unaffected.
+
+<UpstreamSource path="docs/device-images.md" />

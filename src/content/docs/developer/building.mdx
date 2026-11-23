@@ -49,15 +49,15 @@ compile the Cargo and compiler caches are made world-readable, because abuild le
 owned by uid 1000 with mode 640 and the host user that archives or restores a cache
 directory could not read them otherwise.
 
-With `--device BOARD`, the `device` (or `all`) stage assembles an installed board disk image
-instead of an ISO — see [Device images](../devices/index.md#building-one-locally).
+With `--device TARGET`, the `device` (or `all`) stage assembles an installed device disk image
+instead of an ISO — see [Device images](../devices/index.md).
 
 ## What the lockfile pins
 
 `config/sources.lock.json` pins minirootfs hashes, commit archive hashes for the vendored
-sources (aports, ConnMan, gnome-backgrounds, gpu-screen-recorder, the labwc themes and
-ReGreet), feature choices, and the default source epoch. Downloaded files are re-checked on
-every reuse.
+sources (aports, ConnMan, gnome-backgrounds, gpu-screen-recorder, the GTK4 portal backend, the
+labwc themes and ReGreet), feature choices, and the default source epoch. Downloaded files are
+re-checked on every reuse.
 
 The `apps` section pins UFLinux's own apps repository, which publishes `uflinux-files`: its
 URL, signing key, key hash and indexed architectures. The index itself is not pinned by
@@ -74,15 +74,19 @@ picked up. Resolved package versions and hashes are recorded, but a pinned minir
 
 ## The stages
 
-Thirty-one custom APKs are built, in five origins:
+Forty-seven custom APKs are built, in nine origins:
 
 | Origin | APKs |
 | --- | --- |
+| `musl` | the UFLinux C library: runtime, dev, debug, utils, libintl (five) — see [UFLinux musl](./musl.md) |
 | `connman` | patched ConnMan: runtime, OpenRC, dev, docs, debug (seven) |
 | `uflinux-regreet` | ReGreet (one) |
+| `xdg-desktop-portal-gtk4` | the GTK4 portal backend (one) |
 | `gpu-screen-recorder` | patched recorder: runtime, dev, docs, debug (four) |
 | `uflinux-settings` | GUI, desktop shell, screencapture tool, installer UI, daemon/CLI, system helper, OpenRC, documentation, debug symbols (nine) |
-| `uflinux` | distribution packages (ten) |
+| `uflinux-rds` | Remote Desktop: runtime, debug, documentation, server, web client, system helper, VAAPI backend (seven) |
+| `uflinux` | distribution packages (eleven) |
+| `simp1e-cursors` | the Simp1e scheme and its Adwaita-dark variant (two) |
 
 ConnMan's pinned upstream source and Alpine compatibility patches are retained with the build
 inputs.
@@ -93,12 +97,12 @@ inputs.
 | `packages` | Root installs recipe dependencies with `SUDO_APK=apk abuild -F deps`; the unprivileged builder runs plain `abuild` — dependency validation, locked Cargo fetch, frozen release build and tests, development signing. Root removes temporary dependencies afterwards, including after a failure. This avoids target setuid helpers, which cannot elevate under QEMU user emulation. |
 | `sign` | Verifies incoming development signatures, replaces only the APK v2 signature stream, signs indexes, and verifies the results. |
 | `image` | Alpine `mkimage` with a custom profile, an APK cache, and a reproducible configuration overlay. See [Boot-image compression](./compression.md). |
-| `device` | With `--device`: installs the board's package set into a separate chroot, configures an installed system, regenerates the initramfs without a modloop, and writes a raw GPT image without loop devices or mounts. The assembled disk is re-read and checked for geometry, identifiers, boot files and initramfs compression before compression. |
+| `device` | With `--device`: installs the target's package set into a separate chroot, configures an installed system, regenerates the initramfs without a modloop, and writes a raw GPT image without loop devices or mounts. The assembled disk is re-read and checked for geometry, identifiers, boot files and initramfs compression before compression. |
 | `verify` | Installs the custom packages through apk, tests a headless desktop and toplevel controls against the resident desktop shell (quick-settings panels, Start menu and wallpaper drawing), checks every shipped executable's architecture and library linkage, and exercises the installer safeguards. Firmware boot and disk installation are separate VM jobs. |
 
 ## Building one package
 
-Use the same entry point, and repeat independently for each of the five origins:
+Use the same entry point, and repeat independently for each of the nine origins:
 
 ```sh
 sudo --preserve-env=APK_REPOSITORY_URL bash scripts/build.sh --arch x86_64 \
@@ -124,9 +128,9 @@ clean-rebuild report first. Parallel builds retain build APKs, Cargo inputs and 
 separately under `out/inputs/ARCH/ORIGIN`, with the origin in the release asset name;
 sequential builds keep the original four-archive format.
 
-GitHub compiles the five origins independently: a pull request or `main` push schedules
-five compile jobs (x86_64 only), and a release tag or full-matrix manual run schedules
-thirty — one per architecture and origin — with at most eight compile jobs at a time. Each
+GitHub compiles the nine origins independently: a pull request or `main` push schedules
+nine compile jobs (x86_64 only), and a release tag or full-matrix manual run schedules
+fifty-four — one per architecture and origin — with at most eight compile jobs at a time. Each
 origin gets its own VM, development signing key, timeout and cache.
 
 ## Outputs
@@ -134,7 +138,7 @@ origin gets its own VM, development signing key, timeout and cache.
 | Directory | Contents |
 | --- | --- |
 | `out/images/ARCH` | ISO and SHA-256/SHA-512 sidecars |
-| `out/devices/ARCH` | Board disk images (`img.zst`) and SHA-256 sidecars |
+| `out/devices/ARCH` | Device disk images (`img.zst`) and SHA-256 sidecars |
 | `out/package-shards/ARCH/ORIGIN` | Isolated compile outputs before collection |
 | `out/packages/ARCH` | Build-signed APKs and their public key |
 | `out/repository/ARCH` | Final signed APKs and `APKINDEX` |
@@ -155,6 +159,17 @@ The Settings origin additionally forces fat LTO in its `APKBUILD`, overriding th
 `lto = "thin"`; ReGreet only sets the optimization level. Release builds use Cargo's default
 debug-info level, and Alpine still splits any available debug symbols into the debug APKs.
 There is no `target-cpu=native` or host instruction-set tuning.
+
+On pushed release tags for native x86_64 and aarch64 the two heavy Rust origins are built
+harder: the Settings origin compiles all seven executables with `opt-level=3`, fat LTO, PGO and
+BOLT, trained on private D-Bus and headless labwc, and reuses those workloads to check the final
+executables; the Remote Desktop origin does the same for its five executables, trained by
+starting the broker, logging in through the web gateway and opening a headless session. Run a
+shard that way locally with `--settings-pgo` or `--rds-pgo` on the matching architecture. The
+profiles travel in the compile artifact as `settings-pgo-profiles.tar.gz` and
+`rds-pgo-profiles.tar.gz`, and the native x86_64 clean rebuild replays them with a fresh
+compiler target directory. The two optimized origins never share a shard, so a job replays at
+most one profile set.
 
 These controls help reproducibility, but **byte-for-byte reproducibility is not claimed**
 until two clean builds with identical resolved packages have been compared. Clean-build
@@ -178,8 +193,10 @@ subpackage to appear in that inventory with the same checksum as the published A
 exception is the device-only set in `ISO_EXCLUDED_PACKAGES` (`scripts/builder.py`), currently
 `uflinux-device`: those APKs are built, signed and published so device disk images can
 install them from the release repository, but the live system never pulls them in, so
-requiring them in the ISO would block every release. Original APK licence annotations are
-retained in `licenseComments`;
+requiring them in the ISO would block every release. A subpackage split out under a custom
+suffix gets no automatic dependency on its main package, so such a recipe has to declare one —
+otherwise the main package is published but never installed and the release is refused.
+Original APK licence annotations are retained in `licenseComments`;
 `licenseDeclared` and `licenseConcluded` use `NOASSERTION`, because Alpine annotations can
 contain non-SPDX strings and the inventory does not guess how to reinterpret them.
 

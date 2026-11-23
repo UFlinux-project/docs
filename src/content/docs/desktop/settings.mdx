@@ -11,15 +11,16 @@ needs. It is written in Rust with plain GTK4 and application-local CSS, uses you
 theme, and does **not** depend on libadwaita, GNOME Settings, or the GNOME settings
 daemon.
 
-`Super` + `I` opens the nine-page sidebar interface. Pages are built on demand and
-discarded when you leave them, so the UI stays small; image previews are bounded and
-arbitrary remote wallpapers are never downloaded.
+`Super` + `I` opens a ten-page interface: the navigation sidebar stays visible and the header
+bar carries the settings search field alongside minimize, maximize and close. Pages are built
+on demand and discarded when you leave them, so the UI stays small; image previews are bounded
+and arbitrary remote wallpapers are never downloaded.
 
-The pages are **Network**, **Sound**, **Audio**, **Displays**, **Power**, **Default
-apps**, **Date and time**, **Appearance**, **Screen capture** and **About**. The Network
-page is split into **Wi-Fi**, **Ethernet**, **Bluetooth** and **VPN** tabs, and Sound and
-Audio split devices into **Output** and **Input** tabs. Tabs share one fixed frame, so
-switching them never resizes the window or the flyout, and a tab is built only once its
+The pages are **Network**, **Displays**, **Sound**, **Power**, **Default Applications**, **Date
+& Time**, **Appearance**, **Screen Capture**, **Remote Desktop** and **About**. The Network
+page is split into **Wi-Fi**, **Ethernet**, **Bluetooth** and **VPN** tabs, and Sound splits
+devices into **Output** and **Input** tabs. Tabs share one fixed frame, so switching them
+never resizes the window or the flyout, and a tab is built only once its
 hardware appears in a snapshot.
 
 ## Panels and the command line
@@ -158,11 +159,39 @@ because the protocol supplies no push event.
 Configures `uflinux-screencapture`, the tool behind `Print Screen`: screenshot format and
 folder, clipboard copying, flash, cursor capture and delay, plus the recording target,
 quality preset, audio source and frame rate. Remaining recording options sit behind an
-Advanced expander. The page reports whether the `gpu-screen-recorder` backend was detected
+Advanced expander, mirroring the backend's own frontend; whether that expander is open is
+itself a preference. The page reports whether the `gpu-screen-recorder` backend was detected
 and can re-run that probe.
+
+`Print Screen` opens the dimmed capture overlay, which offers **Screen**, **Window** and
+**Area** modes. Recording supports Screen and Area. `Shift` + `Print Screen` or `Ctrl` +
+`Print Screen` starts a screen recording directly when Screen is the mode selected here.
+While a recording runs, the taskbar shows a red timer: click it to stop, or right-click to
+pause and resume.
 
 Hardware encoding needs a VA-API driver. The desktop meta ships the Mesa gallium driver
 plus both Intel VA-API drivers, so recording works out of the box on AMD and Intel GPUs.
+On boards whose encoder is the Qualcomm Iris/Venus V4L2 device — the Arrow Dragon Q6A, for
+example — the capture buffer is aligned to 128 × 32 before it reaches the encoder, which is
+what that device requires and what keeps recording edges clean at any resolution.
+
+## Remote Desktop
+
+The Remote Desktop page administers `uflinux-rds`, the IronRDP-based server that ships
+**disabled**. It turns the service on and off, sets the native RDP port and the web-client
+port, restricts logins to a user or group list, and caps concurrent sessions. Each connected
+user gets a private headless `labwc` session inside `cage`, so the machine behaves like a
+terminal server rather than sharing one desktop. The codec section chooses H.264 (`auto`,
+`force` or `off`), RemoteFX, and the frame-rate cap; `auto` prefers the out-of-process
+`ffmpeg -c:v h264_vaapi` encoder, which needs the optional `uflinux-rds-vaapi` package, and
+falls back to software OpenH264 and then RemoteFX. The web client on port 3390 can be
+disabled entirely, switched from HTTPS to HTTP, and given a custom certificate instead of the
+generated self-signed one.
+
+Changes are written to `/etc/uflinux/rds.json` and pushed to the running broker, so applying
+them does not drop live sessions. Enabling the service, starting it and disconnecting a
+session go through `org.uflinux.rds.configure` and therefore through polkit. Full details are
+on the [Remote Desktop](./remote-desktop.md) page.
 
 ## Default apps and About
 

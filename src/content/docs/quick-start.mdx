@@ -9,13 +9,13 @@ source: README.md
 import UpstreamSource from '../../components/UpstreamSource.astro';
 
 This page takes you from a downloaded ISO to a running desktop. If you only want to try
-UFLinux, stop after [Explore the live session](#explore-the-live-session) — nothing is
+UFLinux, stop after [Explore the live session](#4-explore-the-live-session) — nothing is
 written to your disk until you run the installer.
 
 ## 1. Download and verify
 
 Grab the ISO for your machine from the
-[latest release](https://github.com/UFlinux-project/uflinux3/releases) together with its
+[latest release](https://github.com/UFlinux-project/uflinux/releases) together with its
 `SHA256SUMS` file, then check it:
 
 ```sh
@@ -26,7 +26,7 @@ If you have the [`gh` CLI](https://cli.github.com/), you can also verify the bui
 attestation:
 
 ```sh
-gh attestation verify uflinux-0.1.0-x86_64.iso --repo UFlinux-project/uflinux3
+gh attestation verify uflinux-0.1.0-x86_64.iso --repo UFlinux-project/uflinux
 ```
 
 See [Downloads and verification](./reference/releases.md) for the full list of files.
@@ -44,8 +44,7 @@ doas dd if=uflinux-0.1.0-x86_64.iso of=/dev/sdX bs=4M oflag=sync status=progress
 
 Boot from it. The live desktop starts automatically and logs you in as `live`. On a
 serial console, use **live / live**. The live image also provides a **user / user**
-account with password-authenticated `sudo` and `doas`, the same one the board and VM
-disk images ship.
+account with password-authenticated `sudo` and `doas`, the same one the device images ship.
 
 The live session runs entirely from the media and does not need a network connection to
 reach the desktop. Two things to know:
@@ -53,9 +52,10 @@ reach the desktop. Two things to know:
 - The `live` account can run `doas` **without a password**. The root account is locked.
 - SSH is not enabled, so the machine is not reachable from the network by default.
 
-The live image loads its root filesystem into RAM and includes Alpine's full
-`linux-firmware` collection, so it needs noticeably more memory than an installed
-system. Plan for at least 4 GiB.
+The live image loads its root filesystem into RAM and carries Alpine's `linux-firmware`
+collection except the Snapdragon-only `linux-firmware-qcom`, which only ships in the Arrow
+Dragon Q6A image, so it needs noticeably more memory than an installed system. Plan for at
+least 4 GiB.
 
 ## 3. Get online
 
@@ -76,13 +76,13 @@ flyout, and the clock, which opens a calendar with a notification centre. The ba
 | --- | --- |
 | `Super` | Open the Start menu |
 | `Super` + `Space` | Application launcher |
-| `Super` + `Enter` | Terminal (Foot) |
+| `Super` + `Enter` | Terminal (Ptyxis) |
 | `Super` + `E` | Files (UFLinux Files) |
 | `Super` + `I` | Settings |
 | `Super` + `D` | Show the desktop |
 | `Print Screen` | Screenshot and recording tool |
 
-Installed applications include Foot, UFLinux Files, Loupe, htop, Firefox with uBlock
+Installed applications include Ptyxis, UFLinux Files, Loupe, htop, Firefox with uBlock
 Origin, Mako, Transmission, Celluloid, GNOME Disks and File Roller. UFLinux Files comes
 from the apps repository and is not published for every architecture. See
 [Desktop overview](./desktop/overview.md) for the full picture and
@@ -97,6 +97,9 @@ Before you do, check your partitioning plan. UFLinux **never partitions and neve
 formats** anything on your behalf in the "prepared" mode, and the guided mode erases a
 whole disk. The installed root must be **XFS** with a separate `/boot`.
 
-[Installation](./installing.md) walks through both modes and the command-line installer.
+[Installation](./installing.md) walks through both modes and the command-line installer. A PC
+that should skip the installer altogether can be flashed with one of the preinstalled device
+images instead — `pc-xfs` for a hard drive or SSD, `pc-f2fs` for a flash drive or SD card,
+alongside `qcs6490`, `rpi`, `spacemit-k1` and `vm`. See [Device images](./devices/index.md).
 
 <UpstreamSource path="README.md" />

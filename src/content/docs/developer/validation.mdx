@@ -115,6 +115,25 @@ key is never echoed back. A taskbar phase seeds `taskbar.json`, restarts the dae
 the file to survive unchanged, then corrupts the file and requires the daemon to start anyway
 with no popup.
 
+The headless harness also runs Files integration phases: `UFLINUX_TEST_FILES_INTEGRATION` with
+the built Files provider and search daemon checks desktop icon launch and placement, provider
+restart, and application, file and folder results in Start; `UFLINUX_TEST_FILES_FALLBACK` with a
+Files binary built with the `desktop-icons` feature verifies native renderer takeover; and
+`UFLINUX_TEST_ICON_MEMORY`, combined with the integration test, checks the resident shell's
+12 MiB budget for 200 icons without thumbnail requests.
+
+The packaged session ships a window control layout that gives every application all three
+buttons. The gschema `button-layout` override plus a matching `gtk-decoration-layout` in the
+system `settings.ini` cover client-side decorations, and `<theme><titlebar><layout>` in
+`labwc-rc.xml` covers server-side decorations. That settings file is installed twice, under
+`/etc/xdg/gtk-{3,4}.0` and `/etc/gtk-{3,4}.0`: a toolkit reads the sysconfdir copy
+unconditionally, while the XDG copy is only found when `XDG_CONFIG_DIRS` still points at
+`/etc/xdg`; if none resolves, GTK falls back to its built-in `menu:close` and apps show only a
+close button. A per-user `~/.config/gtk-{3,4}.0/settings.ini` always wins, and an app that sets
+its own decoration layout ignores the setting. Note that labwc names the buttons `iconify` and
+`max` where GTK uses `minimize` and `maximize`. This is configuration, not prototype behaviour,
+and the headless harness does not exercise it.
+
 Those figures come from one headless-pixman environment on one kernel and are **not** a release
 approval. The collector does not measure interactive frame latency, widget or D-Bus subscription
 growth, real audio devices, multi-architecture builds, or an installed low-memory VM.
@@ -137,6 +156,10 @@ run, from an installed UFLinux desktop on each reference device:
 - **Graphics** — check the renderer in Displays and About, the actual GPU and driver, normal
   launch and logout, supported Vulkan and OpenGL plus the software fallback. A configured
   renderer is not evidence of hardware acceleration.
+- **Screen capture** — record the desktop on a board whose encoder is the Qualcomm Iris/Venus
+  V4L2 device (for example the Arrow Dragon Q6A) and inspect the result for padding artefacts
+  along the right and bottom edges. The capture buffer is aligned to 128 by 32 there, so a
+  correct recording has clean edges at any resolution.
 - **Displays** — apply exact advertised refresh modes, scaling, rotation and arrangement; leave
   a change unconfirmed to check the 15-second rollback; unplug and reconnect to confirm a usable
   display recovers and the saved layout returns.

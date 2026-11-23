@@ -1,6 +1,9 @@
+import path from 'node:path';
 import { defineConfig } from 'astro/config';
+import { satteri } from '@astrojs/markdown-satteri';
 import starlight from '@astrojs/starlight';
 
+import { docsLinks } from './src/docs-links.js';
 import { sidebar } from './sidebar.mjs';
 
 const fontAwesome = [
@@ -24,6 +27,11 @@ export default defineConfig({
 	site: 'https://docs.uflinux.org',
 	output: 'static',
 	trailingSlash: 'ignore',
+	markdown: {
+		processor: satteri({
+			hastPlugins: [docsLinks({ docsRoot: path.resolve('./src/content/docs') })],
+		}),
+	},
 	integrations: [
 		// Starlight registers astro-expressive-code, which must be set up before MDX.
 		starlight({

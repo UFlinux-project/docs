@@ -12,8 +12,12 @@ UFLinux se instaluje ze stejného ISO, ze kterého bootujete live systém. Insta
 bere z podepsaného repozitáře na médiu, takže instalace offline funguje; přepínač `--online`
 povolí i oficiální zrcadla Alpine pro balíčky, které na médiu nejsou.
 
-Obrazy pro desky — Raspberry Pi, Qualcomm, SpacemiT K1 a virtuální stroje — tuto stránku
-přeskočily: zapisují se na celý disk a nainstalované už jsou. Viz
+Live obraz i nainstalovaný systém mají sbírku `linux-firmware` od Alpine kromě
+Snapdragon-only `linux-firmware-qcom` (163 MiB Snapdragon blobů, které žádný PC nepotřebuje),
+která se dodává jen v obraze pro Arrow Dragon Q6A. Seznam nese `config/firmware-packages.txt`.
+
+Oba obrazy pro PC a obrazy pro desky — Raspberry Pi, Qualcomm, SpacemiT K1 a virtuální stroje
+— tuto stránku přeskočily: zapisují se na celý disk a nainstalované už jsou. Viz
 [Obrazy pro zařízení](./devices/index.md).
 
 ## Co instalátor očekává
@@ -96,7 +100,7 @@ Nainstalovaný systém dostane:
 - ReGreet jako přihlašovací obrazovku s tmavým motivem adw-gtk3, která startuje prostředí
   přímo a bez výběru relace;
 - initramfs s grafickými ovladači, které byly aktivní během instalace, takže raná grafika
-  potřebuje málo firmwaru. Ostatní ovladače a celá kolekce firmwaru se načtou po připojení
+  potřebuje málo firmwaru. Ostatní ovladače a zbytek sbírky firmwaru se načtou po připojení
   kořenového systému.
 
 Přihlašovací údaje z live relace, automatické přihlášení a služby jen pro live se nepřenášejí.

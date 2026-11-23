@@ -13,10 +13,11 @@ private key.
 
 ## The pipeline
 
-Compilation runs as five independent package-origin jobs per architecture — `connman`,
-`gpu-screen-recorder`, `uflinux-regreet`, `uflinux-settings` and `uflinux` — each with its
-own VM, development signing key, timeout and cache. PR and `main` builds schedule five
-compile jobs; manual and tag runs schedule thirty, one per architecture and origin, with at
+Compilation runs as nine independent package-origin jobs per architecture — `connman`,
+`gpu-screen-recorder`, `musl`, `simp1e-cursors`, `uflinux`, `uflinux-rds`, `uflinux-regreet`,
+`uflinux-settings` and `xdg-desktop-portal-gtk4` — each with its own VM, development signing key,
+timeout and cache. PR and `main` builds schedule nine
+compile jobs; manual and tag runs schedule fifty-four, one per architecture and origin, with at
 most eight running at once.
 
 Heavy Rust builds and their native clean-rebuild comparisons run independently. Signing and
@@ -83,8 +84,11 @@ The next publication retrieves its history from the existing Pages repository. U
 packages and ISOs are not hosted on Pages.
 
 Publishing refuses a Pages payload over 900 MiB and an individual release asset at or above
-2 GiB. Input archives and multi-architecture compiler caches consume significant artifact
-storage, so review your account's storage usage and retention settings. Per-run compiler
+2 GiB, naming the offending file. An ISO at or above **1900 MiB** is annotated as a warning
+instead, so a release does not fail on a size that was already visible in the previous run; each
+image record also stores the ISO's exact length as `iso_bytes`. Input archives and
+multi-architecture compiler caches consume significant artifact storage, so review your account's
+storage usage and retention settings. Per-run compiler
 cache keys allow saving progress after a failed or interrupted build.
 
 Rebuild inputs stay available as workflow artifacts under the configured retention period;
@@ -95,7 +99,8 @@ published only after every input upload and verification job succeeds.
 
 `device-images` is a matrix job that runs only on version tags, and on manual runs where
 **Build device images** is checked. It reuses the compile artifacts, signs the packages, and
-assembles one image per board and architecture pair, at most four at a time. Experimental
+assembles one image per device target and architecture pair — the six targets in
+`config/devices.json` — at most four at a time. Experimental
 entries use `continue-on-error`, so their logs and artifacts publish without failing the
 release.
 

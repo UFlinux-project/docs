@@ -7,7 +7,7 @@ source: README.md
 import UpstreamSource from '../../../components/UpstreamSource.astro';
 
 UFLinux images are published as GitHub Releases of
-[`UFlinux-project/uflinux3`](https://github.com/UFlinux-project/uflinux3/releases). Every
+[`UFlinux-project/uflinux`](https://github.com/UFlinux-project/uflinux/releases). Every
 artifact is built by GitHub Actions from a version tag, and the workflow attaches build
 attestations to what it publishes.
 
@@ -48,7 +48,7 @@ sha256sum -c uflinux-0.1.0-rpi-aarch64.img.zst.sha256
 Then verify the build attestation with the [`gh` CLI](https://cli.github.com/):
 
 ```sh
-gh attestation verify uflinux-0.1.0-x86_64.iso --repo UFlinux-project/uflinux3
+gh attestation verify uflinux-0.1.0-x86_64.iso --repo UFlinux-project/uflinux
 ```
 
 An attestation ties the artifact to the workflow run that produced it, which a checksum
@@ -63,8 +63,9 @@ for **both x86_64 firmware modes**. That means:
   and UEFI, including installation onto XFS and reboot from the installed disk.
 - The other five architectures are built and their packages and ISOs published, but no
   virtual machine is started with them. Expect rough edges.
-- Device images are supplementary. They are attached to the release but cannot block it, and
-  none has an automated boot test.
+- Device images are supplementary. Six targets are built — `pc-f2fs`, `pc-xfs`, `qcs6490`,
+  `rpi`, `spacemit-k1` and `vm` — attached to the release but unable to block it, and none has
+  an automated boot test.
 
 A configured test is not evidence of a successful run. For anything beyond x86_64, check the
 workflow results and the attached build records rather than assuming a row passed. See

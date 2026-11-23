@@ -11,9 +11,10 @@ the centre of the screen, the UFLinux spinner rotates below it, and the UFLinux 
 sits below the spinner.
 
 The layout follows what UEFI machines report through the ACPI **BGRT** table, so the
-vendor logo is never moved, scaled or overpainted. On machines without BGRT — legacy BIOS,
-most ARM boards, virtual machines — a fallback leaf occupies exactly the same slot, so
-nothing shifts.
+vendor logo is never moved, scaled or overpainted — the firmware supplies it. On machines
+without BGRT — legacy BIOS, most ARM boards, virtual machines — the simplified website leaf
+logo occupies exactly the same slot, so nothing shifts. The leaf and logotype use pinned
+upstream artwork.
 
 ## Turning it off
 
@@ -33,11 +34,13 @@ Plymouth plugin that reads `/sys/firmware/acpi/bgrt/{status,xoffset,yoffset,imag
 theme lives in `/usr/share/plymouth/themes/uflinux`, and its packaged configuration is
 `/etc/plymouth/plymouthd.conf`.
 
-The upstream bootloader splash is kept unaltered as `uflinux-splash-original.png`. Its
-leaf box and logotype box are copied into the fallback and watermark images with the black
-background converted to alpha and no resampling, so both compose correctly over a vendor
-logo. The spinner is 24 frames at a 15-degree step, animated by the `two-step` module
-itself. Separate images cover the passphrase and filesystem-check dialogs.
+The upstream bootloader splash is kept unaltered as `uflinux-splash-original.png`, and only
+its logotype box is cut out into the watermark image, with the black background converted to
+alpha and no resampling. The leaf in that splash is not used: `rsvg-convert` renders the
+simplified website SVG into the fallback image at its native 220 × 220 size, keeping the white
+circle and black leaf. `rsvg-convert` is needed only at build time. The spinner is 24 frames
+at a 15-degree step, animated by the `two-step` module itself. Separate images cover the
+passphrase and filesystem-check dialogs.
 
 ### Boot lifecycle
 

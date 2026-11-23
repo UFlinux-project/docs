@@ -20,7 +20,7 @@ each chosen or written for a specific job. It has no GNOME or KDE dependencies.
 | Session service | `uflinux-settingsd`, headless GLib/GIO |
 | Privileged helper | `uflinux-settings-system`, root D-Bus + polkit |
 | Greeter | ReGreet with the adw-gtk3 dark theme |
-| Terminal | Foot |
+| Terminal | Ptyxis |
 | File manager | UFLinux Files (`uflinux-files`, from the apps repository) |
 | Notifications | Mako |
 | Audio | PipeWire and WirePlumber, with `pipewire-pulse` |
@@ -63,7 +63,7 @@ software-rendering allocations.
 Every architecture ships:
 
 - **Firefox** with uBlock Origin
-- **Foot** terminal
+- **Ptyxis** terminal, opened with `Super` + `Enter`
 - **Loupe** image viewer and **htop**
 - **Celluloid** media player
 - **Transmission** BitTorrent client
@@ -74,18 +74,19 @@ Every architecture ships:
 
 **UFLinux Files** (`uflinux-files`) comes from the apps repository, which indexes only
 `x86_64`, `aarch64`, `ppc64le` and `riscv64` — `x86` and `armv7` ship without a graphical
-file manager rather than with an unsatisfiable dependency. There is no remote-desktop
-service enabled by default.
+file manager rather than with an unsatisfiable dependency. **Remote Desktop** (RDP) ships
+in the image too, but **disabled by default**, so nothing listens on any port until you
+turn it on — see [Remote Desktop](./remote-desktop.md).
 
 ## Memory
 
 The installed desktop is built and accepted against a reference target of **512 MiB of
 RAM, one display, and no swap**. The live image is a different story: it unpacks the
-desktop and the full Papirus icon theme into a tmpfs root whose default capacity is 75%
+desktop and the full Papirus-Dark icon theme into a tmpfs root whose default capacity is 75%
 of RAM, so live sessions need at least 4 GiB.
 
 Background components are budgeted at ≤16 MiB PSS, the full Settings UI at ≤80 MiB, and
-the flyout at ≤64 MiB. See [Validation record](./developer/validation.md) for measured
+the flyout at ≤64 MiB. See [Validation record](../developer/validation.md) for measured
 numbers.
 
 ## Taskbar layout

@@ -15,7 +15,7 @@ mapped.
 ## Opening it
 
 Click the leaf on the taskbar, or release either `Super` key. `Super` + `R` and
-`Super` + `Space` also toggle it. It uses Papirus icons and your selected GTK theme.
+`Super` + `Space` also toggle it. It uses Papirus-Dark icons and your selected GTK theme.
 
 The Start menu and the Network, Sound and Power menus replace each other, while a full
 Settings window can stay open alongside them.
@@ -25,10 +25,13 @@ Settings window can stay open alongside them.
 Shortcuts to Files, Terminal, Settings, and your default web browser when one is
 installed. **All Applications** opens the alphabetical catalog.
 
-Search matches application names, generic names, descriptions and keywords, with exact
-name matches ranked first. Hidden desktop entries and entries unavailable in the current
-desktop session are excluded. Applications launch through GIO desktop-entry handling, and
-**search text is never interpreted as a command**.
+Typing in **Search** shows indexed applications first, then matching file and folder names
+from the file manager's configured search roots. Local application matches supplement the
+index when localized names or keywords differ, and stay available if the search service is
+absent. Applications launch through GIO desktop-entry handling; files and folders open in
+their default applications. Every result row shows its icon with the program or file name
+vertically centered against it, so the text stays level with the icon instead of sitting at
+the top of the row.
 
 ## Right column
 
@@ -69,8 +72,8 @@ Settings, not here.
 
 ## Keyboard behaviour
 
-Search takes focus when the menu opens. Arrow keys move through applications and `Enter`
-launches the selection. `Escape` works in stages: it cancels a confirmation, then clears
+Search takes focus when the menu opens. Arrow keys move through the results and `Enter`
+opens the selection. `Escape` works in stages: it cancels a confirmation, then clears
 the search, then returns from All Applications, and finally closes the menu. Clicks
 outside close it immediately. Closing resets search, selection and confirmations, but does
 not destroy the catalog.

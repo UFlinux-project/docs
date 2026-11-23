@@ -10,7 +10,7 @@ export const collections = {
 			extend: () =>
 				z.object({
 					/**
-					 * Path of the file in https://github.com/UFlinux-project/uflinux3 this page was
+					 * Path of the file in https://github.com/UFlinux-project/uflinux this page was
 					 * derived from, used by the provenance footer and by future doc syncs.
 					 */
 					source: z.string().optional(),

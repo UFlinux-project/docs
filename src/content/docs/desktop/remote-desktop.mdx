@@ -1,0 +1,123 @@
+---
+title: Remote Desktop
+description: The IronRDP-based remote desktop server — per-user private sessions, a browser client, codecs, and how to enable it.
+source: docs/settings.md
+---
+
+import UpstreamSource from '../../../components/UpstreamSource.astro';
+
+UFLinux ships a remote desktop server, `uflinux-rds`, built on
+[IronRDP](https://github.com/IronRDP/ironrdp). It is modelled on Windows Remote Desktop
+Services: one broker, one private session per logged-in user, and no shared desktop. Each
+connected user gets their own headless `labwc` compositor, so two people on one machine
+neither see nor drive each other's desktop.
+
+**It is disabled by default.** Until you enable it nothing listens on any port, and while
+enabled and idle the broker is a single small process with no listeners and no children.
+Encoder initialisation, the per-user compositor and the web gateway's session state all
+appear on the first connection and are torn down again when the last client leaves.
+
+## Enabling it
+
+The [Remote Desktop page in Settings](./settings.md#remote-desktop) is the normal way in:
+it turns the service on and off, and every change it makes goes through the
+`org.uflinux.rds.configure` polkit action, so an ordinary desktop user can administer it.
+
+From a terminal, `uflinux-rdsctl` does the same:
+
+```sh
+uflinux-rdsctl enable      # sets the enabled key and adds the service to boot
+uflinux-rdsctl status      # listeners and session roster
+uflinux-rdsctl sessions    # who is connected
+uflinux-rdsctl disconnect SESSION_ID
+```
+
+`start` and `stop` ask a running broker to open or close its listeners and therefore work
+without root; with no broker answering they fall back to `rc-service uflinux-rds`, which
+does need root. `enable` and `disable` always need root, because they move both halves of
+the master switch — the default runlevel and the `enabled` key of the configuration file.
+Starting a disabled service is refused: enable it first.
+
+## Configuration
+
+`/etc/uflinux/rds.json` is the only configuration file, and it is what the Settings page
+edits. A few common values can also be set in shell syntax in `/etc/conf.d/uflinux-rds`.
+
+| Group | Keys |
+| --- | --- |
+| Service | `enabled`, `rdp_port`, `rdp_bind` |
+| Access | `allowed_users`, `allowed_groups`, `max_sessions`, `idle_timeout_secs`, `session_command` |
+| Codec | `codec.h264` (`auto`/`force`/`off`), `codec.allow_remotefx`, `codec.rfx_quant`, `codec.max_fps`, `codec.vaapi_device` |
+| Web | `web.enabled`, `web.port`, `web.bind`, `web.https`, `web.certificate`, `web.token_ttl_minutes` |
+
+Native clients must allow TLS security. NLA cannot be required, because the PAM backend does
+not support CredSSP.
+
+Apply a change without restarting, which keeps existing sessions alive:
+
+```sh
+uflinux-rdsctl apply /etc/uflinux/rds.json
+```
+
+Applying a configuration that changes `enabled` also starts or stops the listeners — that is
+what the Settings switch promises — while any other field is adopted without disturbing a
+running service.
+
+## Codecs
+
+`codec.h264 = "auto"` prefers a hardware encoder and falls back to software OpenH264, then to
+RemoteFX or plain bitmap updates depending on what the client negotiated. Hardware encoding
+runs `ffmpeg -c:v h264_vaapi` **out of process**, so a driver crash takes down one encoder
+rather than a session; it needs the optional `uflinux-rds-vaapi` package. `force` requires
+AVC support and an encoder on native connections, and `off` disables H.264 entirely.
+
+H.264 is for native clients such as mstsc, FreeRDP and Remmina. **Browser clients always
+receive QOI or RemoteFX**, because no browser decodes the H.264 RDP channel.
+
+Clients that negotiate CLIPRDR can exchange plain Unicode text with the remote clipboard.
+Native clients can also hear audio from the remote desktop's private PipeWire output through
+RDPSND; the browser client has text clipboard but no audio.
+
+Clients with RDP Display Control can resize the session's single headless output while
+connected, and the browser console requests a new resolution when its viewport changes.
+Sizes stay within the advertised pixel budget and use even dimensions for H.264.
+
+## The browser client
+
+`uflinux-rds-web` serves a login page and the wasm client on port **3390**, over HTTPS by
+default. It is a separate binary so that disabling the web gateway also removes its listener.
+The page can be disabled entirely, switched to plain HTTP, or given your own certificate
+instead of the self-signed one it generates on first use.
+
+The login form posts to the gateway, which authenticates through the same PAM service, mints
+a short-lived one-time token, and hands the browser the console page. That page opens a
+WebSocket and drives the same IronRDP client a native connection uses, so the browser speaks
+real RDP. Nothing about the session is stored server-side beyond the token.
+
+The gateway does not dial the public RDP port. It relays each WebSocket into a private unix
+socket of the broker, and because that hop is already encrypted the inner TLS handshake is
+skipped — otherwise the browser, which believes the connection is secure, would find a second
+TLS handshake inside it.
+
+## What a session costs
+
+A session is a real desktop: the compositor, the session bus, and everything in the normal
+autostart set. An idle session stops encoding entirely, and when the client disconnects the
+desktop is torn down rather than left running — reconnecting starts a fresh session. A client
+silent for `idle_timeout_secs` is dropped.
+
+## Packages
+
+| Package | Contents |
+| --- | --- |
+| `uflinux-rds` | Broker, `uflinux-rdsctl`, `/etc/uflinux/rds.json`, OpenRC service, PAM and D-Bus/polkit data |
+| `uflinux-rds-server` | Per-connection session host |
+| `uflinux-rds-web` | Web gateway with the compiled wasm client embedded |
+| `uflinux-rds-system` | Authorized helper, its D-Bus service and polkit rules |
+| `uflinux-rds-vaapi` | `ffmpeg`, `openh264` and `libva` for hardware H.264 |
+
+The desktop meta package pulls in `uflinux-rds` and `uflinux-rds-vaapi`, so the binaries are
+already on an installed system; `uflinux-rds-vaapi` is separate so a machine that never
+enables Remote Desktop can drop it.
+
+<UpstreamSource path="docs/settings.md" />

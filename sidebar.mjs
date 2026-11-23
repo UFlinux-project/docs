@@ -33,6 +33,7 @@ export const sidebar = [
 			page({ label: 'UFLinux Settings', cs: 'Nastavení UFLinux', slug: 'desktop/settings' }),
 			page({ label: 'Start menu', cs: 'Start menu', slug: 'desktop/start-menu' }),
 			page({ label: 'Appearance and themes', cs: 'Vzhled a motivy', slug: 'desktop/appearance' }),
+			page({ label: 'Remote Desktop', cs: 'Vzdálená plocha', slug: 'desktop/remote-desktop' }),
 			page({ label: 'Startup animation', cs: 'Úvodní animace', slug: 'desktop/bootsplash' }),
 		],
 	},
@@ -41,6 +42,7 @@ export const sidebar = [
 		translations: cs('Zařízení'),
 		items: [
 			page({ label: 'Device images', cs: 'Obrazy pro zařízení', slug: 'devices' }),
+			page({ label: 'PCs', cs: 'Počítače', slug: 'devices/pc' }),
 			page({ label: 'Raspberry Pi 3–5', cs: 'Raspberry Pi 3–5', slug: 'devices/raspberry-pi' }),
 			page({ label: 'Dragon Q6A-class boards', cs: 'Desky Dragon Q6A', slug: 'devices/qcs6490' }),
 			page({ label: 'SpacemiT K1 boards', cs: 'Desky SpacemiT K1', slug: 'devices/spacemit-k1' }),
@@ -62,6 +64,7 @@ export const sidebar = [
 				slug: 'reference/keyboard-shortcuts',
 			}),
 			page({ label: 'Downloads and verification', cs: 'Stahování a ověření', slug: 'reference/releases' }),
+			page({ label: 'Memory compression', cs: 'Komprese paměti', slug: 'reference/memory-compression' }),
 			page({ label: 'Frequently asked questions', cs: 'Časté dotazy', slug: 'reference/faq' }),
 		],
 	},
@@ -83,6 +86,7 @@ export const sidebar = [
 			}),
 			page({ label: 'Maintenance', cs: 'Údržba', slug: 'developer/maintenance' }),
 			page({ label: 'Boot-image compression', cs: 'Komprese boot obrazu', slug: 'developer/compression' }),
+			page({ label: 'UFLinux musl', cs: 'UFLinux musl', slug: 'developer/musl' }),
 			page({
 				label: 'Artwork and licenses',
 				cs: 'Grafika a licence',

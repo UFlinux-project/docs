@@ -129,8 +129,11 @@ series against the pinned upstream snapshot before upgrading it, and keep the ca
 originating-monitor tests in the desktop harness.
 
 Before release, review PSS, idle CPU, mapped-frame latency, binary and ISO size, and physical
-hardware coverage separately. Only the x86_64 ISO is boot-tested; the other architectures are
-published without a boot report. An older development ISO's historical record is not a
-substitute for validating a changed desktop stack.
+hardware coverage separately. The x86_64 BIOS job exercises simulated Wi-Fi and ConnMan SNTP
+before disk installation, and both x86_64 firmware modes reboot the installed desktop with
+512 MiB and no swap; publication requires those results for the exact ISO hash, in addition to
+the nine package/desktop build reports. Only the x86_64 ISO is boot-tested; the other
+architectures are published without a boot report. An older development ISO's historical record
+is not a substitute for validating a changed desktop stack.
 
 <UpstreamSource path="docs/maintenance.md" />

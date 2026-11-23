@@ -9,12 +9,12 @@ source: README.md
 import UpstreamSource from '../../../components/UpstreamSource.astro';
 
 Tato stránka vás dovede od staženého ISO k běžícímu pracovnímu prostředí. Pokud chcete jen
-UFLinux vyzkoušet, stačí dojít k [Prohlídka live relace](#prohlídka-live-relace) — na disk se
+UFLinux vyzkoušet, stačí dojít k [Prohlídka live relace](#4-prohlídka-live-relace) — na disk se
 nic nezapíše, dokud nespustíte instalátor.
 
 ## 1. Stažení a ověření
 
-Stáhněte ISO pro svůj stroj z [posledního vydání](https://github.com/UFlinux-project/uflinux3/releases)
+Stáhněte ISO pro svůj stroj z [posledního vydání](https://github.com/UFlinux-project/uflinux/releases)
 spolu se souborem `SHA256SUMS` a zkontrolujte ho:
 
 ```sh
@@ -24,7 +24,7 @@ sha256sum -c SHA256SUMS
 Máte-li [`gh` CLI](https://cli.github.com/), můžete ověřit i atestaci sestavení:
 
 ```sh
-gh attestation verify uflinux-0.1.0-x86_64.iso --repo UFlinux-project/uflinux3
+gh attestation verify uflinux-0.1.0-x86_64.iso --repo UFlinux-project/uflinux
 ```
 
 Úplný seznam souborů najdete na stránce [Stahování a ověření](./reference/releases.md).
@@ -49,9 +49,9 @@ Live relace běží celá z média a k přístupu k ploše nepotřebuje síť. D
 - Účet `live` může spouštět `doas` **bez hesla**. Účet root je zamčený.
 - SSH není zapnuté, takže stroj není z defaultu dostupný ze sítě.
 
-Live obraz načítá kořenový systém do RAM a obsahuje i plnou kolekci `linux-firmware` od
-Alpine, takže potřebuje výrazně více paměti než nainstalovaný systém. Počítejte nejméně s
-4 GiB.
+Live obraz načítá kořenový systém do RAM a obsahuje i sbírku `linux-firmware` od Alpine,
+jen bez Snapdragon-only `linux-firmware-qcom`, takže potřebuje výrazně více paměti než
+nainstalovaný systém. Počítejte nejméně s 4 GiB.
 
 ## 3. Připojte se k síti
 
@@ -71,13 +71,13 @@ nastavení a hodiny, které otevírají kalendář s centrem oznámení. Základ
 | --- | --- |
 | `Super` | Otevřít nabídku Start |
 | `Super` + `Space` | Spouštěč aplikací |
-| `Super` + `Enter` | Terminál (Foot) |
+| `Super` + `Enter` | Terminál (Ptyxis) |
 | `Super` + `E` | Soubory (UFLinux Files) |
 | `Super` + `I` | Nastavení |
 | `Super` + `D` | Zobrazit plochu |
 | `Print Screen` | Nástroj na snímky a záznam obrazovky |
 
-Nainstalované aplikace zahrnují Foot, UFLinux Files, Loupe, htop, Firefox s uBlock Origin,
+Nainstalované aplikace zahrnují Ptyxis, UFLinux Files, Loupe, htop, Firefox s uBlock Origin,
 Mako, Transmission, Celluloid, GNOME Disks a File Roller. UFLinux Files pochází z repozitáře
 aplikací a není publikován pro všechny architektury. Podrobnosti jsou v
 [Přehledu pracovního prostředí](./desktop/overview.md)

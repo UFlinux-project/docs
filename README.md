@@ -5,7 +5,7 @@ with [Astro Starlight](https://starlight.astro.build).
 
 - Live site: <https://docs.uflinux.org>
 - Content is derived from the developer notes in
-  [`UFlinux-project/uflinux3`](https://github.com/UFlinux-project/uflinux3). Every derived page
+  [`UFlinux-project/uflinux`](https://github.com/UFlinux-project/uflinux). Every derived page
   links to the exact upstream file it was rewritten from.
 - Languages: English (default) and Czech (`/cs/`). Untranslated Czech pages fall back to
   English instead of 404ing.
@@ -16,12 +16,17 @@ with [Astro Starlight](https://starlight.astro.build).
 astro.config.mjs        site, branding, i18n, Starlight plugins
 sidebar.mjs             explicit navigation for both locales
 src/content.config.ts   frontmatter schema (adds `source` and `status`)
+src/docs-links.js       Markdown processor plugin: resolves relative `.md` links to routes
 src/content/docs/       English pages
 src/content/docs/cs/    Czech pages, mirrored slugs
 src/components/         UpstreamSource.astro, PageTitle.astro (status badge)
 src/styles/custom.css   brand tokens and site-wide tweaks
 public/                 favicon, logo, _headers, _redirects
 ```
+
+Pages link to each other with a `.md` extension so the sources stay readable on GitHub. Astro
+publishes such links verbatim, so the `docsLinks()` hast plugin in `astro.config.mjs` rewrites
+them to site routes at build time; relative links without an extension are left alone.
 
 `status:` in a page's frontmatter (`Supported`, `Experimental`, `Draft`) renders as a badge
 above the heading. `source:` records the upstream file and feeds the provenance footer.

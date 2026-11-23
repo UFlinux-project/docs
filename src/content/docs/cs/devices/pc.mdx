@@ -1,0 +1,121 @@
+---
+title: Počítače
+description: Předinstalované diskové obrazy UFLinuxu pro stroje x86 s bootováním BIOS i UEFI
+  na jednom disku.
+source: docs/device-images.md
+---
+
+import UpstreamSource from '../../../../components/UpstreamSource.astro';
+
+Obrazy `pc-*` jsou UFLinux zapsaný přímo na úložiště počítače: žádná live session ani
+instalátor — obraz nahrajete, nabootujete a přihlásíte se. Jsou to jediné cílové obrazy,
+které nejsou desky, a jediné, které mají na jednom disku bootovací řetězec pro BIOS i UEFI.
+
+## Co to je
+
+| | `pc-xfs` | `pc-f2fs` |
+| --- | --- | --- |
+| Pro | Počítače s pevným diskem nebo SSD | Počítače bootující z flash disku nebo SD karty |
+| Architektura | x86_64 a x86 | x86_64 |
+| Kernel | Alpine `linux-lts` | Alpine `linux-lts` |
+| Boot | BIOS `syslinux` + UEFI `systemd-boot` | BIOS `syslinux` + UEFI `systemd-boot` |
+| Kořenový souborový systém | XFS s labelem `UFLINUX_ROOT` | f2fs s lz4 kompresí clusterů |
+| Velikost | 4096 MiB bez komprese | 4096 MiB bez komprese |
+| Stav | Podporováno | Podporováno |
+
+Oba jsou označené jako podporované, protože jsou součástí pravidelné release matice a
+nejsou označené jako experimentální. Ani jeden ale zatím nebyl spuštěn na fyzickém stroji
+a ani jeden není pokrytý automatickými boot testy — viz
+[Obrazy pro zařízení](./index.md#jak-číst-stav-zařízení).
+
+## Jeden disk, dvě kategorie firmwaru
+
+Obraz pro počítač musí nabootovat s jakýmkoli firmwarem, který stroj zrovna má, proto ESP
+obsahuje dva nezávislé bootovací řetězce:
+
+- **UEFI** používá layout pro vyměnitelná média: `EFI/boot/bootx64.efi` (resp.
+  `bootia32.efi` u 32bitového obrazu), `loader/loader.conf` a
+  `loader/entries/uflinux.conf`. Do startovacích proměnných firmwaru se nic nezapisuje,
+  takže nemusí existovat žádný NVRAM záznam a stejný disk nabootuje v jakémkoli stroji —
+  včetně takového, který záznam, který kdysi měl, zapomněl.
+- **BIOS** používá `syslinux`: `gptmbr.bin` zabírá prvních 440 bajtů disku a řetězově
+  spouští `ldlinux.sys` v ESP, který čte `syslinux.cfg`. Aby to fungovalo, jsou potřeba tři
+  věci a build ověřuje všechny tři: oddíl ESP má GPT atribut `LegacyBIOSBootable`
+  (obyčejné klíčové slovo `bootable` v `sfdisk` nastavuje jen boot indikátor v MBR a
+  `gptmbr.bin` pak vypíše jen holé `Boot failed`), `ldlinux.sys` a `ldlinux.c32` existují a
+  `libcom32.c32` s `libutil.c32` leží vedle nich.
+
+Oba obrazy obsahují `amd-ucode` i `intel-ucode` a předávají oba microcode obrazy oběma
+bootloaderům, takže microcode procesoru se nahraje dřív, než začne kernel.
+
+Balíček `syslinux` normálně instaluje trigger, který při každé transakci s kernelem spustí
+`update-extlinux` a přepíše konfiguraci bootloaderu, kterou na připojeném ESP najde.
+Profily pro počítače nastavují `disable_trigger=1` v `/etc/update-extlinux.conf`, protože
+obraz `syslinux.cfg` vygeneruje jednou a spravuje ho — jinak by se s ním distro pomocník
+přel na každé aktualizaci balíčku.
+
+## Jak se mezi obrazy rozhodnout
+
+`pc-xfs` používá XFS, stejný souborový systém jako nainstalovaný systém z ISO: pevný disk
+nebo SSD nemá žádné z omezení, kterým f2fs slouží.
+
+`pc-f2fs` je pro USB flash nebo SD kartu, které musí vydržet tisíce drobných zápisů, a
+žádá kernel o lz4 kompresi clusterů ve F2FS (`compress_algorithm=lz4,compress_mode=fs`
+na řádku připojení s odpovídajícími feature bity v superblocku — build ověřuje, že je
+formátovač skutečně nastavil).
+
+`pc-f2fs` se staví jen pro x86_64. Počítače s i386 jsou vzácné natolik, že architekturu
+pokryje jediný 32bitový obraz (`pc-xfs`), a každý další obraz stojí v release matici celý job navíc.
+
+## Jak ho zapsat
+
+```sh
+IMG=uflinux-0.1.0-pc-xfs-x86_64.img.zst
+zstd -d < $IMG | sudo dd of=/dev/sda bs=8M oflag=direct status=progress
+sync
+```
+
+Nekomprimovaný obraz má 4096 MiB, takže postačí jakýkoli větší disk, SSD nebo flash.
+Kořenový oddíl se při prvním startu roztáhne na celou velikost: XFS online prostřednictvím
+služby prvního startu, F2FS offline v initramfs. Viz
+[První start](./index.md#co-je-při-startu-jinak), jak každá z cest funguje
+a jak vypaduje chyba.
+
+Přihlašujte se jako **user / user** — stejný účet, který má každý obraz pro zařízení — na
+displayi nebo na sériové konzoli `ttyS0` s nastavením 115200 8n1, a pro administrátorské
+příkazy použijte `sudo` nebo `doas` s tímto heslem. Greeter je povolený, takže se za účet
+lze přihlásit i graficky.
+
+## Co obraz obsahuje
+
+Sada balíčků je desktop meta plus `linux-lts`, `systemd-boot`, `syslinux`, `amd-ucode`,
+`intel-ucode` a Mesa Vulkan ovladače pro grafiky Intel, NVIDIA a virtio.
+
+Firmware tvoří subbalíčky `linux-firmware` z Alpine **kromě** `linux-firmware-qcom`
+a `linux-firmware-none` — 163 MiB blobů pro Snapdragon desky, které žádný počítač
+nepotřebuje. Wi-Fi a Bluetooth od Qualcommu v M.2 stále fungují: jejich firmware je
+v subbalíčcích `ath10k`, `ath11k`, `ath12k`, `qca` a `ar3k`, které součástí jsou.
+
+## Kdy použít obraz pro počítač místo ISO
+
+Instalovatelné ISO je ověřovaný artifact: ISO pro x86_64 CI startuje při každém commitu
+a jeho instalátor umožňuje rozložení zvolit a nastavit vlastní účet. Obraz pro počítač
+zvolte, když:
+
+- chcete stroj připravit skriptem nebo z měřicí stanice místo odpovídání otázek
+  instalátoru;
+- systém žije na USB flashi nebo SD kartě, kde je `pc-f2fs` lepší volbou souborového
+  systému;
+- chcete znovu přehratelný zlatý obraz: známý dobrý stav disku, který na stroj vrátíte
+  jedním `dd` místo reinstalace.
+
+Nevýhoda je, že obraz pro zařízení má pevné rozložení — jedno ESP a jeden kořen — a je
+doplňkový: rozbitý obraz nikdy nezablokuje release a není testovaný startováním.
+
+## Secure Boot
+
+Bootování s UEFI funguje, ale tyto obrazy neposkytují podepsané záznamy pro UEFI Secure
+Boot. Startujte se Secure Boot vypnutým. Podpisy APK a modloopů jsou samostatné mechanismy
+a nejsou tím dotčeny.
+
+<UpstreamSource path="docs/device-images.md" />

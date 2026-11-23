@@ -7,29 +7,43 @@ source: docs/artwork.md
 import UpstreamSource from '../../../components/UpstreamSource.astro';
 
 The desktop restores the icon theme and default wallpaper selected by the
-[original UFLinux configuration](https://github.com/UFlinux-project/main): Papirus and
-GNOME's *Dark Ivy*. Those assets are third-party artwork used by the original distribution,
-not artwork authored by UFLinux. For the user-facing side, see
-[Appearance and themes](../desktop/appearance.md).
+[original UFLinux configuration](https://github.com/UFlinux-project/main): Papirus — as
+**Papirus-Dark** in every current default — and GNOME's *Dark Ivy*. Those assets are third-party
+artwork used by the original distribution, not artwork authored by UFLinux. For the user-facing
+side, see [Appearance and themes](../desktop/appearance.md).
 
 ## Where each asset comes from
 
 | Asset | Source | Provenance control |
 | --- | --- | --- |
-| Papirus icons | Alpine's signed `papirus-icon-theme` | resolved-package inventory |
+| Papirus-Dark icons | Alpine's signed `papirus-icon-theme` | resolved-package inventory |
+| Pointer theme | Adwaita dark scheme of `simp1e-cursors`, built from pinned upstream source | commit archive hash in the source lock |
 | `adw-gtk3-dark` | Alpine's signed `adw-gtk3` | resolved-package inventory |
 | Six wallpapers | GNOME 3.38.0 source archive | URL and SHA-512 pinned in the source lock |
-| Leaf logo | Original UFLinux Calamares branding | exact upstream bytes in the artwork lock |
+| Leaf logo | Simplified SVG from the UFLinux website | exact upstream bytes in the artwork lock |
 
 The GNOME archive is verified against GNOME's published checksum file as well, and the
 package builder retains the archive with other rebuild inputs and verifies it during
 extraction. No wallpaper is fetched at login.
 
-The logo is copied unchanged from the original
-[Calamares branding](https://github.com/UFlinux-project/uf-calamares-settings). It appears on
-the taskbar's Start button, the Settings application icon and About, and in the
-[startup animation](../desktop/bootsplash.md), where the fallback and watermark images are
-derived from the upstream bootloader splash without resampling.
+GTK3, GTK4, labwc, ReGreet and Mako select **Papirus-Dark**; Adwaita stays available for
+fallback icons, and personal preferences override the packaged defaults. The pointer uses the
+Adwaita dark scheme of the `simp1e-cursors` theme, which ships as its own
+`simp1e-cursors-adw-dark` package depending on the base `simp1e-cursors` package, so selecting
+the variant pulls the scheme it extends. Only the base theme and that variant are generated:
+the recipe is a trimmed copy of Alpine's `testing/simp1e-cursors`, because the package is not in
+the pinned release's main and community repositories and Alpine's 49 scheme subpackages would be
+wasted space. GTK and GSettings pick the theme up from packaged drop-ins, ReGreet from its
+`cursor_theme_name` option, and labwc — which has no cursor option in `rc.xml` — from
+`XCURSOR_THEME` in `/etc/xdg/labwc/environment`.
+
+The simplified leaf logo is copied unchanged from the
+[UFLinux website](https://uflinux.org/assets/logo.svg) as of 17 November 2026. It appears on the
+taskbar's Start button and, rendered at its native size, as the
+[startup animation](../desktop/bootsplash.md) fallback on machines without a firmware logo; only
+the logotype box is cut from the upstream bootloader splash for the watermark, without
+resampling. Settings uses the icon theme's `preferences-system` gear icon instead of branded
+artwork, so its icon follows the user's theme.
 
 ## Wallpapers
 
@@ -43,7 +57,8 @@ selects it again. No GNOME desktop or settings daemon is needed.
 
 - UFLinux scripts, Settings and configuration: **GPL-3.0-only**, matching the repository
   licence.
-- The original UFLinux leaf logo: reused under **GPL-3.0-only**.
+- The simplified leaf logo: the website SVG carries **no licence notice**; its source is
+  recorded in the artwork notice rather than restated as a licence.
 - Dark Ivy by Garrett LeSage; Endless Shapes and the Symbolics images by Jakub Steiner —
   **CC BY-SA 3.0**.
 - Cold Warm by invisiblepower and Road by Joshua Welch — **CC0**.
@@ -51,8 +66,7 @@ selects it again. No GNOME desktop or settings daemon is needed.
 - Vendored files and distributed packages retain their upstream licences and attribution.
 
 The exact GNOME attribution and licence notice, GPL text and artwork notice are installed in
-`/usr/share/licenses/uflinux-defaults/`. Settings' copy of the logo is covered by its GPL
-licence and source attribution in `settings/README.md`.
+`/usr/share/licenses/uflinux-defaults/`.
 
 ## The SPDX inventory
 
@@ -68,8 +82,8 @@ boolean operators, and the inventory does not guess how to reinterpret them.
 
 ## What the test suite checks
 
-The package and desktop verification suite checks Papirus and branded icon lookup, SVG
+The package and desktop verification suite checks Papirus-Dark and branded icon lookup, SVG
 rendering, every bundled image's dimensions, bounded previews, the Start configuration, and
-actual wallpaper process startup.
+actual wallpaper drawing by the resident desktop.
 
 <UpstreamSource path="docs/artwork.md" />

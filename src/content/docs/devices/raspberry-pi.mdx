@@ -20,6 +20,7 @@ Alpine's `linux-rpi` kernel, booted by the board's own VideoCore firmware.
 | Kernel | Alpine `linux-rpi` |
 | Boot | VideoCore firmware with `config.txt` |
 | Root filesystem | f2fs, label `UFLINUX_ROOT` |
+| Size | 6144 MiB uncompressed |
 | Status | Supported |
 
 "Supported" here means the target is part of the regular build and is not marked
@@ -50,8 +51,9 @@ Full details — layout, first login, the resize service, and updates — are on
 ## Notes for Pi users
 
 - The image is aarch64 only. A Raspberry Pi 3 in 32-bit mode wants a different image.
-- f2fs is used deliberately for SD-card wear levelling. The resized space appears in `df`
-  after a second reboot.
+- f2fs is used deliberately for SD-card wear levelling. The root is grown offline in the
+  initramfs, before it is mounted, so the full size is there from the first boot — see
+  [First boot](./index.md#first-boot-the-root-partition-grows).
 - The desktop expects a local display; the serial console is configured at 115200 8n1 on
   the board's default UART.
 - Physical GPU, HDMI, audio and Wi-Fi behaviour on a Pi has not been certified. Alpine's
