@@ -19,10 +19,11 @@
  --sl-color-hairline-light: #3a3a3a;
  --sl-color-hairline-shade: #3a3a3a;
  --sl-nav-height: 152px;
- --sl-content-width: 48rem;
+ --sl-content-width: min(70rem, 100%);
  color-scheme: dark;
 }
-:root:not([data-has-sidebar]) { --sl-content-width: 74rem; }
+:root:not([data-has-sidebar]) { --sl-content-width: min(74rem, 100%); }
+@media (min-width: 72rem) { [data-has-sidebar][data-has-toc] .main-pane { --sl-content-margin-inline: auto; } }
 html { scrollbar-gutter: stable; }
 body { background: #181818; }
 a:focus-visible, button:focus-visible, select:focus-visible { outline: 3px solid #d1d1d1; outline-offset: 5px; }
