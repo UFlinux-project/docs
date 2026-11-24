@@ -1,0 +1,103 @@
+---
+title: "Časté dotazy"
+description: "Odpovědi na dotazy k Alpine, síti, systemd, Secure Bootu, paměti a stavu vydání."
+source: README.md
+---
+
+import UpstreamSource from '../../../../components/UpstreamSource.astro';
+
+## Je UFLinux fork Alpine?
+
+Ne. UFLinux připíná stabilní vydání Alpine, vytváří nad ním sadu vlastních balíčků a sestavuje
+je do obrazů. Oficiální repozitáře Alpine `main` a `community` zůstávají aktivní, takže běžné
+balíčky Alpine fungují jako obvykle.
+
+## Je už UFLinux vydaný?
+
+Jde o předběžné vydání. Základní je verze `0.1.0` na Alpine 3.24. Pouze x86_64 ISO byl testován při spouštění; šest
+obrazů zařízení (`pc-f2fs`, `pc-xfs`, `qcs6490`, `rpi`, `spacemit-k1`, `vm`) je náhled.
+Přečtěte si [Stahování a ověřování](./releases.md), než se na to spolehnete.
+
+## Proč jen XFS?
+
+Kořenový souborový systém instalace musí být XFS se samostatným `/boot`. Je to záměrná jediná
+volba: jeden souborový systém znamená jednu konfiguraci initramfs, jednu sadu chování pro
+změnu velikosti a obnovy a jednu věc, kterou projekt skutečně testoval. Instalační program
+nikdy nerozděluje nebo neformátuje v "připraveném" režimu, takže souborový systém je spíše
+pevný než vyjednávaný. [Instalace](../installing.md) pokrývá rozložení.
+
+## Proč se nepoužívá NetworkManager?
+
+Síť je ConnMan s iwd. Je malý, rychle se spouští a pokrývá osobní a podnikové Wi-Fi plus
+Ethernet, DHCP, IPv4/IPv6, DNS a proxy. WireGuard VPN jsou podporovány prostřednictvím VPN
+démona ConnMan a spravovány z Nastavení. Zbývající mezery jsou hotspot, tethering a podpora
+modemu. Nezapínejte `networking`, `dhcpcd` nebo jiný resolver vedle něj.
+
+## Kde je `ntpd`?
+
+Čas synchronizuje výhradně klient SNTP vestavěný do ConnManu – žádný `ntpd`, `chronyd` nebo
+`openntpd`. Přes `adjtimex()` posouvá malé offsety a krokuje velké a Settings hlásí skutečný
+stav synchronizace jádra, nikoli to, zda bylo vyhledávání úspěšné.
+
+## Používá UFLinux systemd?
+
+Ne. Je to OpenRC, stejně jako Alpine. Zaváděcí služby běží paralelně tam, kde to závislosti
+umožňují; nastavte `rc_parallel="NO"` v `/etc/rc.conf.d/uflinux.conf` při diagnostice problému
+se zaváděním. elogind poskytuje akce relace a ovládání podsvícení.
+
+## Jak je to se Secure Bootem?
+
+Obrazy UEFI se spouštějí s **vypnutým Secure Bootem**. Žádný podpis pro UEFI se
+neregistruje. Podpisy APK a modloop používají samostatné mechanismy.
+
+## Kolik paměti potřebuji?
+
+Nainstalovaný systém je vyvinut a přijat na **512 MiB s jedním displejem a bez swapu**. Živý
+obraz potřebuje alespoň 4 GiB, protože rozbalí plochu a celé téma ikon do kořenového adresáře
+tmpfs. Nainstalované systémy a obrazy zařízení navíc umožňují komprimovaný swap; viz [Komprese
+paměti](./memory-compression.md). Naměřené hodnoty viz [Ověřovací
+záznam](../developer/validation.md).
+
+## Potřebuji GNOME nebo KDE?
+
+Ani. Relace je labwc, prostředí hlavního panelu `uflinux-desktop` a vlastní aplikace GTK4
+UFLinux. Relace nevyžaduje další pracovní prostředí. Nastavení se záměrně vyhýbá libadwaita.
+
+## Mohu použít vlastní konfiguraci panelu?
+
+Ano – umístěte soubor na správné místo a nahradí zabalené výchozí nastavení, nikoli jej
+rozšíří. Konfigurace osobního kompozitoru se nachází v `~/.config/labwc/`, předvolby UFLinux v
+`~/.config/uflinux/` a připnuté oblíbené položky na hlavním panelu v
+`~/.config/uflinux/taskbar.json`. Upgrady balíčků zachovají všechny tři.
+
+## Proč je účet root uzamčený?
+
+Administrace prochází pojmenovaného uživatele s `doas` nebo `sudo` a účet root zůstane
+uzamčen. Na živém obrazu má `live` místní `doas` bez hesla a obraz také poskytuje účet
+**user / user** s ověřovaný heslem `sudo` a `doas`. V nainstalovaném systému má
+vytvořený uživatel ověřovaný heslem `doas`. Některé operace Nastavení procházejí místo
+toho pomocí pomocníka polkit-authenticated pomocí vašeho vlastního hesla.
+
+## Je podporovaný Bluetooth?
+
+Ano. BlueZ se dodává v meta ploše a Nastavení a plovoucí nabídka quick-settings mají kartu
+Bluetooth, která se zobrazí, když je přítomen adaptér: napájení adaptéru, skenování, párování,
+důvěřování a připojení. Párování využívá tok BlueZ bez agenta, takže zařízení, která potřebují
+výměnu I/O funkcí, se stále nemusí párovat. Bluetooth je ověřeno pouze na úrovni zařízení,
+nikoli na fyzickém hardwaru.
+
+## Je k dispozici VPN?
+
+WireGuard prostřednictvím VPN démona ConnMan (`connman-vpnd`, ze samostatného balíčku
+`connman-vpn`). Importujte konfiguraci klienta v Nastavení → Síť → VPN a vytvořte tunel a poté
+jej připojte, odpojte nebo odstraňte. Soukromé klíče zůstávají v démonu a nikdy nejsou vráceny
+zpět.
+
+## Jak nahlásím problém?
+
+Použijte [sledování problémů repo dokumentace](https://github.com/UFlinux-project/docs/issues)
+pro cokoli špatného nebo chybějícího na těchto stránkách a
+[`UFlinux-project/uflinux`](https://github.com/UFlinux-project/uflinux) pro samotnou
+distribuci. Viz [Přispívání](../developer/contributing.md).
+
+<UpstreamSource path="README.md" />

@@ -1,0 +1,71 @@
+---
+title: "Klávesové zkratky"
+description: "Výchozí klávesové zkratky prostředí UFLinuxu včetně ovládání zvuku a jasu."
+source: README.md
+---
+
+import UpstreamSource from '../../../../components/UpstreamSource.astro';
+
+Toto jsou zabalené výchozí hodnoty. Konfigurace kompozitoru žije v `/etc/xdg` a `~/.config/labwc/`
+ji přepíše – viz [Vzhled a témata](../desktop/appearance.md).
+
+## Relace
+
+| Klíče | Akce |
+| --- | --- |
+| `Super` | Otevřete nabídku Start |
+| `Super` (uvolněte kterýkoli klíč) | Přepněte nabídku Start |
+| `Super` + `R` | Přepněte nabídku Start |
+| `Super` + `Space` | Přepněte nabídku Start |
+| `Super` + `Enter` | Terminál (Ptyxis) |
+| `Super` + `E` | Soubory (UFLinux soubory) |
+| `Super` + `D` | Zobrazit plochu |
+| `Super` + `I` | Nastavení UFLinux |
+
+Uvolněním kterékoli klávesy `Super` se otevře nabídka Start, takže jediné klepnutí na `Super`
+je spouštěcím gestem. `Super` + `R` a `Super` + `Space` přepínají stejnou nabídku.
+
+## Snímky obrazovky a nahrávání
+
+| Klíče | Akce |
+| --- | --- |
+| `Print Screen` | Překryvný snímek obrazovky a nahrávání |
+| `Shift` + `Print Screen` | Okamžitě spusťte nahrávání |
+| `Ctrl` + `Print Screen` | Okamžitě spusťte nahrávání |
+
+Překryvná vrstva je `uflinux-screencapture`, uvedená na trh na vyžádání. Snímky obrazovky se
+uloží jako WebP do složky Obrazy a zkopírují se do schránky. Záznam probíhá přes patchovaný
+`gpu-screen-recorder`; hardwarové kódování vyžaduje ovladač VA-API a stolní počítač dodává
+ovladač Mesa gallium plus oba ovladače Intel VA-API, takže nahrávání funguje hned po vybalení
+na AMD a Intel GPU.
+
+Formát, složka, schránka, blesk, zachycení kurzoru, zpoždění, cíl nahrávání, předvolba
+kvality, zdroj zvuku a snímková frekvence jsou všechny konfigurovány v [Nastavení → Snímek
+obrazovky](../desktop/settings.md#snímání-obrazovky).
+
+## Zvuk a jas
+
+Klávesové zkratky pro hlasitost a jas používají stejné nastavení jako nabídky panelu a
+aplikace Nastavení, takže změna klávesové zkratky a změna posuvníku aktualizují stejný stav. Z
+terminálu je stejný backend dostupný pomocí:
+
+```sh
+uflinux-settingsctl volume -5
+uflinux-settingsctl brightness 5
+uflinux-settingsctl mute
+```
+
+## Ovládání nabídky Start
+
+Hledání se zaměří po otevření nabídky. Klávesy se šipkami se pohybují v aplikacích a `Enter`
+spustí výběr. `Escape` funguje ve fázích: zruší potvrzení, poté vymaže vyhledávání, vrátí se
+ze všech aplikací a nakonec zavře nabídku.
+
+## Přihlašovací údaje živé relace
+
+Na živém obrazu se plocha automaticky přihlásí jako `live`. Na sériové konzoli použijte **žít
+/ žít**. Účet `live` má místní `doas` bez hesla, root je uzamčen a SSH je zakázán. Živý obraz
+také poskytuje účet **user / user** s ověřovaný heslem `sudo` a `doas` – stejný účet,
+jaký dodávají obrazy desky a disku VM.
+
+<UpstreamSource path="README.md" />

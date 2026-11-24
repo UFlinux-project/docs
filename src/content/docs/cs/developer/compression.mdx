@@ -1,0 +1,68 @@
+---
+title: "Komprese spouštěcího obrazu"
+description: "Proč obrazy ISO UFLinuxu používají Zstandard pro initramfs a modloop a jak se tím změnila jejich velikost."
+source: docs/compression.md
+---
+
+import UpstreamSource from '../../../../components/UpstreamSource.astro';
+
+UFLinux ISO initramfs a podepsané obrazy modloop používají **Zstandardní úroveň 19**. Obrazy
+disku zařízení používají **ZStandardní úroveň 12** pro celý nezpracovaný obraz GPT. SquashFS
+uchovává 128 kiB bloků, které ohraničují dekompresní paměť per-block, a filtry BCJ specifické
+pro XZ jsou odstraněny.
+
+## Zapojení komprese do sestavení
+
+Tvůrce obrazů nainstaluje kompresor Zstandard do kořenového adresáře sestavení, aniž by jej
+přidal jako závislost na ploše. Zkopíruje `update-kernel` Alpine do adresáře nástrojů
+image-only a použije zamčenou komprimační opravu, zkontroluje kontrolní součet oprav a před
+pokračováním vyžaduje `CONFIG_RD_ZSTD=y` a `CONFIG_SQUASHFS_ZSTD=y` ve vybrané konfiguraci
+jádra.
+
+Všechny čtyři podporované architektury mají obě možnosti v souborech APK jádra `linux-lts`
+Alpine. Soubor architektury byl zúžen po testech obrazu x86_64 níže; jejich zaznamenané ISO
+hashe a inventáře zůstávají historickými důkazy.
+
+Pomocník image-only před podpisem odstraní firmware zařízení z modloop; bezdrátová regulační
+databáze tam zůstane. Alpine `mkinitfs` stále vybírá firmware pro ovladače initramfs a živý
+kořen obsahuje podbalíčky `linux-firmware` uvedené v `config/firmware-packages.txt` – kolekce
+Alpine mínus Snapdragon-only `linux-firmware-qcom`, která se dodává pouze v obrazu QCS6490.
+Zařízení, která potřebují firmware před naplněním živého kořenového adresáře, závisí na výběru
+initramfs.
+
+**Váš nainstalovaný systém není ovlivněn**: Nainstalovaný pomocník Alpine a nastavení
+installed-system `mkinitfs` se nemění.
+
+Po extrakci ISO stavitel zkontroluje magii rámce Zstandard, identifikátor kompresoru SquashFS
+a velikost bloku a otestuje kompletní tok initramfs. Výsledky jdou do
+`checks/ARCH/compression.json` a inventáře zdrojů a sestav zaznamenávají zásady komprese a
+kontrolní součet oprav.
+
+## Naměřené hodnoty
+
+Dva vývojové obrazy x86_64 s identickými desktopovými balíčky a kresbou, před a po změně,
+vytvořené 8. listopadu 2026. Nebyla potřeba žádná rekompilace aplikace – stávající vlastní
+soubory APK byly před sestavením ověřeny a podepsány novým vývojovým klíčem.
+
+| Komponenta | Předchozí obraz gzip/XZ | Zstandardní obraz |
+| --- | ---: | ---: |
+| Initramfs | 173.29 MiB | 159.71 MiB |
+| Modloop | 289.78 MiB | 300.30 MiB |
+| ISO | 945.00 MiB | 942.00 MiB |
+
+Čistá redukce ISO je 3.00 MiB: initramfs se zmenšil, modloop rostl a součet se sotva pohnul.
+Tato měření **ne** stanoví zlepšení boot-time nebo reprodukovatelnost repeat-build a jiné
+architektury mohou mít jinou velikost trade-offs.
+
+## Ověření
+
+Zaznamenáno pro vývojový obraz z 8. listopadu 2026, jehož hlavním panelem byl Ironbar –
+aktuální strom jej od té doby nahradil shellem in-repo `uflinux-desktop`. Obraz x86_64 prošel
+živým spuštěním BIOS i UEFI, připojením signed-modloop, ověřením Ironbar, instalací a
+restartem XFS a zachováním nesouvisejícího oddílu. Instalovaná nastavení, plovoucí nabídka,
+ověřování GTK, testy TLP a ACPI prošly na 512 MiB s jedním displejem, bez výměny a bez OOM.
+Zařízení hwsim sítě se neopakovala.
+
+Jiné obrazy architektury nebyly pro tuto změnu přestavěny ani testován při spouštění.
+
+<UpstreamSource path="docs/compression.md" />

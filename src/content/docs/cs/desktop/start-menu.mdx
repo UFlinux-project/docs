@@ -1,0 +1,128 @@
+---
+title: "Nabídka Start a hlavní panel"
+description: "Nabídka Start, připnutá tlačítka, náhledy oken, hodiny a oznamovací oblast hlavního panelu UFLinuxu."
+source: docs/start-menu.md
+---
+
+import UpstreamSource from '../../../../components/UpstreamSource.astro';
+
+Nabídka Start běží v rezidentním procesu GTK4 `uflinux-desktop` – ve stejném procesu, který
+kreslí hlavní panel. Přihlášení se spustí skrytě s již připravenými výchozími widgety,
+rozložením a katalogem aplikací a uchovává je mezi otevřeními – nabídka se tedy zobrazí
+okamžitě a GTK a sazeč vykreslí vyrovnávací paměti pouze tehdy, když je okno namapováno.
+
+## Otevření nabídky
+
+Klepněte na list na hlavním panelu nebo uvolněte klávesu `Super`. `Super` + `R` a `Super` +
+`Space` jej také přepínají. Používá ikony Papirus-Dark a vámi vybraný motiv GTK.
+
+Nabídka Start a nabídky Síť, Zvuk a Napájení se navzájem nahrazují, přičemž vedle nich může
+zůstat otevřené celé okno Nastavení.
+
+## Levý sloupec
+
+Zkratky pro soubory, terminál, nastavení a váš výchozí webový prohlížeč, pokud je
+nainstalován. **Všechny aplikace** otevře abecední katalog.
+
+Zadáním **Hledat** zobrazíte nejprve indexované aplikace a poté odpovídající názvy souborů a
+složek z konfigurovaných kořenů vyhledávání správcem souborů. Lokální shody aplikací doplňují
+index, když se lokalizované názvy nebo klíčová slova liší, a zůstávají dostupné, pokud
+vyhledávací služba chybí. Spouštění aplikací prostřednictvím GIO desktop-entry zpracování;
+soubory a složky se otevírají ve výchozích aplikacích. Každý řádek výsledku zobrazuje svou
+ikonu s názvem programu nebo souboru, který je svisle vycentrován proti ní, takže text zůstane
+na stejné úrovni s ikonou, místo aby seděl v horní části řádku.
+
+## Pravý sloupec
+
+Název vašeho účtu, Domů, nakonfigurované složky XDG, Nastavení a Terminál. Složky, které
+nejsou k dispozici, zobrazují vysvětlení. `xdg-user-dirs` vytváří standardní složky při
+přihlášení a respektuje stávající konfiguraci.
+
+Oblíbené jsou pevné. Neexistuje žádné sledování posledních souborů nebo aplikací.
+
+## Tlačítka na hlavním panelu, připínání a náhledy
+
+Vedle tlačítka Start pocházejí tlačítka aplikací z připnutých oblíbených položek ve skupinách
+`$XDG_CONFIG_HOME/uflinux/taskbar.json` a running-window. Kliknutí pravým tlačítkem otevře
+nabídku se seznamem oken skupiny s každým tlačítkem pro zavření a u aplikací položkami pro
+spuštění dalšího okna, připnutím nebo odepnutím tlačítka a zavřením všech oken. Připnutá
+tlačítka lze přeskupit přetažením jednoho na druhé; nová objednávka je zapsána zpět do
+stejného souboru a nečitelný soubor se vrátí zpět na výchozí hodnoty, místo aby blokoval
+panel.
+
+Položením ukazatele na spuštěnou aplikaci se otevřou miniatury karet s ovládacími prvky pro
+aktivaci a zavření. **Nastavení → Vzhled → Náhledy oken** řídí oba tyto obrazy a nativní
+mřížku miniatur Alt+Tab labwc a ve výchozím nastavení je povoleno; s vypnutými náhledy si
+karty s kurzorem ponechávají své názvy a Alt+Tab používá klasický seznam. Snímání probíhá
+pouze v době, kdy jsou karty viditelné: až dva snímky za sekundu na okno a čtyři snímky za
+sekundu celkem, snímky maximálně 320×180, mezipaměť maximálně 64 snímků pod 16 MiB vyprší po
+30 sekundách. Nepodporované zachycení a příliš velké zdroje se vrátí k ikonám a názvům.
+
+Hodiny otevírají vyskakovací okno s kalendářem month-navigable a oznamovacím centrem, které
+čte seznam Mako, zatímco je vyskakovací okno otevřené, a zavírá oznámení jednotlivě nebo
+společně. Samotné Mako je stylizované jako tmavé kulaté karty seskupené podle shrnutí,
+ukotvené bottom-right nad hlavním panelem.
+
+## Akce napájení
+
+Odhlásit se, Restartovat a Vypnout požádají o potvrzení s výchozím nastavením **Zrušit**.
+Pozastavení je okamžité. Akce elogind zprávy jako nedostupné jsou zakázány a v nabídce se
+objevují chyby autorizace. Fyzická zásada power-button žije v Nastavení, nikoli zde.
+
+## Ovládání klávesnicí
+
+Hledání se zaměří po otevření nabídky. Klávesy se šipkami se pohybují ve výsledcích a `Enter`
+otevře výběr. `Escape` funguje ve fázích: zruší potvrzení, poté vymaže vyhledávání, vrátí se
+ze všech aplikací a nakonec zavře nabídku. Kliknutí mimo jej okamžitě zavře. Zavření resetuje
+vyhledávání, výběr a potvrzení, ale nezničí katalog.
+
+## Více monitorů
+
+```sh
+uflinux-desktop --start-menu --output DP-1
+uflinux-desktop --panel network --output HDMI-1
+```
+
+Bez `--output` vybere labwc monitor, který obdržel aktivaci klávesnice; tlačítka na hlavním
+panelu vždy poskytují svůj původní monitor. Průhledná vrstva zachycuje vnější kliknutí a
+tlačítko Start, zatímco ostatní ovládací prvky na hlavním panelu jsou použitelné. Odstraněním
+výstupu se nabídka zavře a karta se přizpůsobí menším výstupům a škálování kompozitoru.
+
+Nabídky na hlavním panelu lze otevřít přímo:
+
+```sh
+uflinux-desktop --panel network|sound|power --output NAME
+```
+
+## Ovládání procesu na pozadí
+
+| Příkaz | Efekt |
+| --- | --- |
+| `uflinux-desktop --daemon` | Spusťte nebo zajistěte skrytý rezidentní proces |
+| `uflinux-desktop --hide` | Zavřete nabídku |
+| `uflinux-desktop --status` | Hlásit připravenost a viditelnost |
+| `uflinux-desktop --quit` | Proces explicitně ukončete |
+
+Změny Desktop-file aktualizují katalog, zatímco nabídka je skrytá. Být rezidentní je součástí
+nákladů na paměť na pozadí desktopu.
+
+## Ikony v oznamovací oblasti
+
+Ikony StatusNotifier jsou umístěny za jedinou šipkou na pravém konci hlavního panelu, jako je
+rozbalovací nabídka hidden-icons ve Windows, takže aplikace na pozadí nemohou posunout hodiny
+z úzkého panelu. Šipka je skrytá, zatímco nic není registrováno, a její popis a přístupný
+název hlásí, kolik ikon je za ní.
+
+Plovoucí nabídka je mřížka čtvercových ikon nad panelem, široká čtyři až osm sloupců v
+závislosti na výstupu, a posouvá se, když vyroste výše, než umožňuje plovoucí nabídka.
+Kliknutí levým tlačítkem aktivuje položku nebo otevře její nabídku, když deklaruje
+`ItemIsMenu`. Kliknutí pravým tlačítkem vždy otevře nabídku. Posouváním ikony odešlete událost
+`Scroll`. Najednou je otevřena pouze jedna nabídka zásobníku a plovoucí nabídka zůstává
+otevřená, dokud je jedna z jejích nabídek zobrazena.
+
+## Propojení s Nastavením
+
+Plocha se připojí ke službě Stav nastavení a poskytne agenta relace polkit. Zástupci nastavení
+spouštějí `uflinux-settings` jako samostatný proces.
+
+<UpstreamSource path="docs/start-menu.md" />

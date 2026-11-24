@@ -1,0 +1,71 @@
+---
+title: "Animace při spuštění"
+description: "Jak se spouštěcí animace UFLinuxu zobrazuje s logem firmwaru a jak ji vypnout."
+source: docs/bootsplash.md
+---
+
+import UpstreamSource from '../../../../components/UpstreamSource.astro';
+
+UFLinux zobrazuje na každém počítači stejnou kompozici: vlastní zaváděcí logo firmwaru udržuje
+střed obrazovky, rotující UFLinux se otáčí pod ním a logo UFLinux je umístěno pod spinnerem.
+
+Rozvržení odpovídá tomu, co stroje UEFI hlásí prostřednictvím tabulky ACPI **BGRT**, takže
+logo dodavatele se nikdy nepřemísťuje, neškáluje ani nepřebarvuje – dodává je firmware. Na
+počítačích bez BGRT – starší BIOS, většina desek ARM, virtuální stroje – zabírá zjednodušené
+logo listu webu přesně stejný slot, takže se nic nemění. List a logotyp používají upstream
+kresbu.
+
+## Vypnutí animace
+
+Přidejte některý z těchto příkazů do příkazového řádku jádra, abyste zakázali splash a
+zachovali normální spouštěcí výstup:
+
+```text
+splash=no    nosplash    plymouth.enable=0
+```
+
+Žádné umělé zpoždění není přidáno k normálnímu spouštění v obou případech.
+
+## Jak animace funguje
+
+Téma využívá modul `two-step` od Plymouthu s `UseFirmwareBackground=true` – jediný plugin
+Plymouth, který čte `/sys/firmware/acpi/bgrt/{status,xoffset,yoffset,image}`. Téma žije v
+`/usr/share/plymouth/themes/uflinux` a jeho zabalená konfigurace je
+`/etc/plymouth/plymouthd.conf`.
+
+Úvodní úvodní strana bootloaderu zůstává nezměněna jako `uflinux-splash-original.png` a do
+obrazu vodoznaku je vyříznuto pouze pole jeho loga, s černým pozadím převedeným na alfa a bez
+převzorkování. List v tomto splash se nepoužívá: `rsvg-convert` vykreslí zjednodušený web SVG
+do záložního obrazu v jeho nativní velikosti 220 × 220, přičemž bílý kruh a černý list
+zůstanou. `rsvg-convert` je potřeba pouze v době sestavení. Číselník má 24 snímků v kroku
+15-degree, animovaný samotným modulem `two-step`. Samostatné obrazy pokrývají přístupová
+fráze a dialogy filesystem-check.
+
+### Průběh spouštění systému
+
+`uflinux-initramfs-init` spouští původní init z Alpine a vkládá do něj tři vlastní kroky.
+Připraví `/run` před načtením parametrů jádra a spustí animaci hned po ověření modulů
+ovladačů, bezprostředně po `simpledrm`. Animace tak běží už před hledáním kořenového
+souborového systému nebo rozbalováním balíčků živého obrazu. Kvůli pomalým zařízením
+se spuštění opakuje v obou kontrolních bodech režimu jednoho uživatele. Při každém
+předání kořenového systému se volá `plymouth update-root-fs`, aby démon přežil `switch_root`.
+
+Pokud init Alpine již nemá očekávanou strukturu, obal jej zavede nezměněný a převezmou ho
+služby OpenRC. `uflinux-splash` běží na úrovni běhu `sysinit` po objevení hardwaru a
+`uflinux-splash-stop` uvolní displej před spuštěním pozdravu. Živé i nainstalované obrazy
+umožňují tyto služby, které také pokrývají případ, kdy byly přeskočeny háčky initramfs.
+
+## Chování na neobvyklém hardwaru
+
+Vykreslovací modul používá místní virtuální terminál a zařízení framebuffer DRM. Sériový
+výstup zůstává dostupný a stroje bez lokálního VT ani grafického zařízení jednoduše přeskočí.
+
+Spuštění démona a volání klienta jsou omezeny. Selhání rendereru nezastaví spouštění —
+zaznamená krátkou zprávu a pokračuje; podrobnosti jsou v `/run/uflinux-splash/daemon.log`,
+který je soukromý pro uživatele root. Po předání zobrazení nemá zůstat žádný démon Plymouth.
+
+Podpora architektury nezaručuje použitelný lokální GPU, takže náběh na fyzický grafický
+hardware nad rámec testovaného x86_64 VM je stále otevřený. Viz [Ověřovací
+záznam](../developer/validation.md).
+
+<UpstreamSource path="docs/bootsplash.md" />

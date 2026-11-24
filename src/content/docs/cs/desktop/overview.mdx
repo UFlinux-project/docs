@@ -1,0 +1,99 @@
+---
+title: "Přehled pracovního prostředí"
+description: "Součásti relace UFLinuxu, od kompozitoru labwc a prostředí uflinux-desktop po služby a dodávané aplikace."
+source: README.md
+---
+
+import UpstreamSource from '../../../../components/UpstreamSource.astro';
+
+Desktop UFLinux je relace Wayland sestavená z malého počtu komponent, z nichž každá je vybrána
+nebo napsána pro konkrétní úlohu. Nemá žádné závislosti GNOME nebo KDE.
+
+## Součásti pracovního prostředí
+
+| Vrstva | Komponenta |
+| --- | --- |
+| Skladatel | [labwc](https://labwc.github.io/) |
+| Panel / hlavní panel | `uflinux-desktop`, rezidentní proces GTK4 napsaný pro UFLinux |
+| Nabídka Start | stejný proces `uflinux-desktop` |
+| Nastavení UI | `uflinux-settings`, obyčejný GTK4 |
+| Služba relace | `uflinux-settingsd`, bezhlavý GLib/GIO |
+| Privilegovaný pomocník | `uflinux-settings-system`, kořen D-Bus + polkit |
+| Pozdravit | ReGreet s temným tématem adw-gtk3 |
+| Terminál | Ptyxis |
+| Správce souborů | Soubory UFLinux (`uflinux-files`, z úložiště aplikací) |
+| Oznámení | Mako |
+| Zvuk | PipeWire a WirePlumber, s `pipewire-pulse` |
+| vytváření sítí | ConnMan s iwd |
+| Moc | TLP, plus háček BusyBox `acpid` power-button |
+| Synchronizace času | Klient SNTP ConnMan |
+
+Nastavení a prostředí plochy jsou pracovní plochy Rust používající prostý GTK4 a uživatelské
+téma GTK. Ani jedno nezávisí na libadwaita, GNOME Settings nebo GNOME nastavení démona.
+Nabídka Start je zkompilována do binárního formátu `uflinux-desktop`, takže hlavní panel a
+nabídka jsou jeden proces.
+
+## Spuštění relace
+
+OpenRC spouští nezávislé služby paralelně pro živé i instalované systémy. `uflinux-defaults`
+nastavuje `rc_parallel="YES"` v `/etc/rc.conf.d/uflinux.conf`; Závislosti služeb stále určují
+pořadí. Při diagnostice problému se spouštěním nastavte v tomto souboru `rc_parallel="NO"` –
+změna se projeví při příštím spuštění a přežije upgrady.
+
+ReGreet spustí relaci UFLinux přímo. Neexistuje žádný selektor relace. Sjednocená plocha je
+výchozí relací: `uflinux-autostart` spustí `uflinux-desktop --supervise`, která udržuje
+rezidentní prostředí spuštěné. Nabídka Start začíná skrytě s již připravenými widgety,
+rozložením a katalogem aplikací, takže její otevření je rychlé.
+
+## Výběr vykreslovacího modulu
+
+Obal relace testuje hardware Vulkan, poté hardware OpenGL a poté pixman. Přeskočí Vulkan na
+grafice Sandy Bridge, Ivy Bridge a Bay Trail Intel, kde je podpora Vulkan neúplná, a zcela
+vynechá software Vulkan. Explicitní přepsání vykreslovacího modulu jsou respektována a pokusy
+o záložní spuštění jsou omezeny.
+
+Normální odhlášení – nebo pád po spuštění plochy – **ne** restartuje relaci s jiným
+rendererem. Při softwarovém vykreslování používá GTK Cairo, pokud jej nepřepíšete, a karty
+quick-settings pustí svůj rozmazaný stín, aby se snížilo přidělení software-rendering.
+
+## Nainstalované aplikace
+
+Každá architektura se dodává:
+
+- **Firefox** s uBlock Origin
+- Terminál **Ptyxis**, otevřený pomocí `Super` + `Enter`
+- Prohlížeč obrazů **Lupa** a **htop**
+- Přehrávač médií **Celuloid**
+- **Přenos** BitTorrent klient
+- Upozornění **Mako**
+- **Disky GNOME** a **File Roller** pro obrazy a archivy
+- **gpu-screen-recorder** jako snímek obrazovky a backend screen-recording
+- **BlueZ** pro Bluetooth a ConnMan démon VPN pro WireGuard tunely
+
+**Soubory UFLinux** (`uflinux-files`) pochází z úložiště aplikací na každé podporované
+architektuře. **Vzdálená plocha** (RDP) se dodává také v obrazu, ale **ve výchozím nastavení
+zakázáno**, takže na žádném portu nic neposlouchá, dokud jej nezapnete – viz [Vzdálená
+plocha](./remote-desktop.md).
+
+## Paměť
+
+Nainstalovaný desktop je sestaven a přijat proti referenčnímu cíli **512 MiB RAM, jeden
+displej a žádná swap**. Živý obraz je jiný příběh: rozbalí plochu a celé téma ikon
+Papirus-Dark do kořenového adresáře tmpfs, jehož výchozí kapacita je 75 % RAM, takže živé
+relace potřebují alespoň 4 GiB.
+
+Součásti pozadí jsou rozpočteny na ≤16 MiB PSS, úplné nastavení UI na ≤80 MiB a rozbalovací
+nabídka na ≤64 MiB. Naměřená čísla viz [Ověřovací záznam](../developer/validation.md).
+
+## Rozložení hlavního panelu
+
+Hlavní panel obsahuje tlačítko Start, připnuté oblíbené položky a skupiny running-window,
+zásobník a samostatná tlačítka **Síť**, **Zvuk** a **Moc** se symbolickými ikonami, které
+sledují stav připojení, výstupní hlasitost a baterii. Stolní stroje zobrazují místo baterie
+šroub. Tlačítka lze připnout, změnit jejich pořadí přetažením a zobrazit náhled při najetí
+myší; hodiny otevřou kalendář s oznamovacím centrem. Ikony StatusNotifier z aplikací na pozadí
+jsou umístěny za jedinou šipkou, takže nemohou posunout hodiny z úzkého panelu.
+
+Podrobnosti v [Nabídka Start](./start-menu.md) a [Nastavení UFLinux](./settings.md).
+
+<UpstreamSource path="README.md" />

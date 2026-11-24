@@ -1,0 +1,86 @@
+---
+title: "Stahování a ověřování"
+description: "Kde stáhnout obrazy UFLinuxu, jaké soubory obsahuje vydání a jak je ověřit."
+source: README.md
+---
+
+import UpstreamSource from '../../../../components/UpstreamSource.astro';
+
+Obrazy UFLinux jsou publikovány jako vydání
+[`UFlinux-project/uflinux`](https://github.com/UFlinux-project/uflinux/releases) na GitHubu.
+Každý artefakt vytváří GitHub Actions ze značky verze a pracovní postup připojuje atestace
+sestavení k tomu, co publikuje.
+
+## Obsah vydání
+
+| Artefakt | Pojmenování | Poznámky |
+| --- | --- | --- |
+| Live ISO | `uflinux-VERSION-ARCH.iso` | Čtyři architektury |
+| Kontrolní součty | `SHA256SUMS` | Pokrývá ISO |
+| Obrazy zařízení | `uflinux-VERSION-DEVICE-ARCH.img.zst` | ZStandardní úroveň 12 |
+| Kontrolní součty zařízení | `…img.zst.sha256` | Jeden postranní vozík na obraz |
+| Úložiště balíčků | `apk/v3.24/uflinux` | Podepsané soubory APK plus `APKINDEX` |
+
+Úložiště URL pro aktuální základní linii je:
+
+```text
+https://repo.uflinux.org/apk/v3.24/uflinux
+```
+
+To je vlastní doména Pages – záznam `CNAME` ukazující na web `github.io` úložiště. Samostatné
+úložiště aplikací nesoucí `uflinux-files` žije na `https://apps-repo.uflinux.org/` a je
+podepsáno vlastním klíčem `uflinux3.ec384.pub`.
+
+## Ověření staženého souboru
+
+Nejprve kontrolní součty:
+
+```sh
+sha256sum -c SHA256SUMS
+```
+
+U obrazů zařízení je postranní vozík umístěn vedle souboru:
+
+```sh
+sha256sum -c uflinux-0.1.0-rpi-aarch64.img.zst.sha256
+```
+
+Poté ověřte atest sestavení pomocí [`gh` CLI](https://cli.github.com/):
+
+```sh
+gh attestation verify uflinux-0.1.0-x86_64.iso --repo UFlinux-project/uflinux
+```
+
+Atestace spojuje artefakt s průběhem pracovního postupu, který jej vytvořil, což samotný
+kontrolní součet nemůže.
+
+## Jakému artefaktu nejvíc důvěřovat
+
+Publikace vyžaduje zelené sestavy sestavení pro všechny čtyři architektury a zelené spouštěcí
+zprávy pro **oba režimy firmwaru x86_64**. To znamená:
+
+- **x86_64** je jediná architektura, jejíž ISO byl skutečně spuštěn — v CI, na BIOS a UEFI,
+  včetně instalace na XFS a restartu z nainstalovaného disku.
+- Dalších pět architektur je vytvořeno a jejich balíčky a ISO publikovány, ale není s nimi
+  spuštěn žádný virtuální stroj. Očekávejte hrubé hrany.
+- Obrazy zařízení jsou doplňkové. Je postaveno šest cílů – `pc-f2fs`, `pc-xfs`, `qcs6490`,
+  `rpi`, `spacemit-k1` a `vm` – připojených k vydání, ale neschopných jej zablokovat a žádný
+  nemá automatický bootovací test.
+
+Nakonfigurovaný test není důkazem úspěšného běhu. V případě čehokoli mimo x86_64 zkontrolujte
+výsledky pracovního postupu a připojené záznamy sestavení místo toho, abyste předpokládali, že
+řádek prošel. Viz [Architektury a bota](./architectures.md).
+
+## Podepisování
+
+Balíčky jsou podepsány klíčem EC P-256 nebo P-384 publikovaným jako `uflinux.ec.pub`. apk v2
+nemá žádný tok podpisů ECDSA, takže podpis je přenášen v toku SHA-256 a název streamu `RSA256`
+popisuje souhrn spíše než algoritmus. Úložiště aplikací používá samostatný klíč
+`uflinux3.ec384.pub`, který `uflinux-release` nainstaluje a který je také publikován vedle
+indexu aplikací.
+
+Vývojové obrazy a obrazy pre-release jsou podepsány pomocí **efemérní klíč rozvoje**, nikoli
+klíčem k vydání. Nepovažujte vývojový obraz za vydání persistent-key ani jej nepoužívejte k
+ověřování veřejných aktualizací.
+
+<UpstreamSource path="README.md" />

@@ -1,0 +1,48 @@
+---
+title: "Desky SpacemiT K1"
+description: "Experimentální obraz riscv64 pro desky SpacemiT K1, například Orange Pi RV2."
+status: Experimental
+source: docs/device-images.md
+---
+
+import UpstreamSource from '../../../../components/UpstreamSource.astro';
+
+Obraz `spacemit-k1` je jediný obraz UFLinuxu pro desky s architekturou RISC-V. Před zápisem obrazu počítejte s ovládáním přes sériovou konzoli
+nebo s provozem bez monitoru.
+
+## Parametry obrazu
+
+| | |
+| --- | --- |
+| ID desky | `spacemit-k1` |
+| Desky | Rodina SpacemiT K1: Orange Pi RV2, Orange Pi R2S, BananaPi-F3 |
+| Architektura | riscv64 |
+| Jádro | Alpine `linux-lts` |
+| Spouštění | Spouštění distribuce pomocí U-Boot přes `extlinux/extlinux.conf` |
+| Kořenový souborový systém | f2fs, štítek `UFLINUX_ROOT` |
+| Velikost | 6144 MiB nekomprimováno |
+| Stav | Experimentální |
+
+## Proč se počítá s provozem bez monitoru
+
+SpacemiT Ky X1 od Orange Pi RV2 je RISC-V SoC z rodiny K1, takže obraz je riscv64 a používá
+generický `linux-lts` Alpine, který je postaven s `CONFIG_ARCH_SPACEMIT=y` a dodává
+`spacemit/k1-orangepi-rv2.dtb`.
+
+Strom zařízení K1 v hlavní větvi jádra **neobsahuje uzel pro displej ani GPU**. Pracovní
+prostředí se spustí, ale bez obrazového výstupu. K ovládání desky použijte sériovou
+konzoli (`ttyS0`) nebo desku provozujte bez monitoru.
+
+## Spuštění systému
+
+Obraz využívá **vlastní U-Boot desky** prostřednictvím `extlinux/extlinux.conf` na ESP spolu se stromem
+zařízení desky pod `dtbs/`. Do prostředí bootloaderu se nic nezapisuje, takže stávající
+nastavení U-Boot nadále funguje. Pokud normálně flashujete U-Boot samostatně, tento krok se
+nezmění.
+
+## Zápis obrazu
+
+Stejný postup jako u každého obrazu jiného zařízení – viz [Obrazy pro zařízení](./index.md#zápis-obrazu). Před prvním spuštěním připojte sériový kabel na 115200
+8n1 na `ttyS0`; přihlaste se jako **user / user**.
+
+<UpstreamSource path="docs/device-images.md" />

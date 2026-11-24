@@ -1,0 +1,128 @@
+---
+title: "CI a publikování"
+description: "Jak GitHub Actions sestavuje, podepisuje, testuje a publikuje vydání UFLinuxu."
+source: docs/github.md
+---
+
+import UpstreamSource from '../../../../components/UpstreamSource.astro';
+
+Celá distribuce je postavena GitHub Actions. Pull požadavků a push do `main` sestavení x86_64;
+ruční spuštění a značky verzí vytvářejí všechny čtyři architektury. Publikovat lze pouze
+události push pro platné značky verzí – ruční spuštění se nikdy nestane sestavením vydání
+poskytnutím soukromého klíče.
+
+## Průběh sestavení
+
+Kompilace běží jako devět nezávislých package-origin jobs per architecture — `connman`,
+`gpu-screen-recorder`, `musl`, `simp1e-cursors`, `uflinux`, `uflinux-rds`, `uflinux-regreet`,
+`uflinux-settings` and `xdg-desktop-portal-gtk4` — each with its own VM, development signing
+key, timeout and cache. PR a `main` sestavují plán devíti kompilačních úloh; manuál a plán
+spouštění značek fifty-four, jeden pro každou architekturu a původ, s maximálně osmi
+spuštěnými najednou.
+
+Sestavy Heavy Rust a jejich nativní porovnání clean-rebuild běží nezávisle. Podepisování a
+sestavení ISO čeká na kompletní ověřenou sadu souborů APK. Úloha obrazu před podpisem
+zkontroluje úplnost, identitu sestavení, archivní hash a nativní zprávy o reprodukovatelnosti
+a stahuje kompilované artefakty přímo, aby se zabránilo dalšímu nahrávání a stahování
+kombinovaných archivů.
+
+Kompilace je přerušena před limitem úlohy six-hour, aby bylo možné uložit mezipaměti.
+Emulované studené sestavení jsou pomalé a **neúplná architektura vydání selže** spíše než tiše
+mizí z matrice.
+
+## Klíče
+
+Uvolňovací klíče jsou předány pouze krokům podepisování, sestavení a repository-index a
+soubory soukromých klíčů jsou odstraněny po dokončení těchto příkazů – včetně selhání.
+Sestavení používají izolované vývojové klíče bez tajemství vydání, takže se nahrávají pouze
+veřejné klíče, soubory APK, obrazy, mezipaměti veřejných vstupů a testovací záznamy.
+
+Generování trvalého klíče (P-256 nebo P-384) ve vlastním adresáři — `$HOME/.config/uflinux` je
+adresář user-preference plochy:
+
+```sh
+install -d -m 700 "$HOME/.config/uflinux3-signing"
+openssl genpkey -algorithm EC -pkeyopt ec_paramgen_curve:P-256 \
+  -out "$HOME/.config/uflinux3-signing/uflinux.ec"
+chmod 600 "$HOME/.config/uflinux3-signing/uflinux.ec"
+openssl pkey -in "$HOME/.config/uflinux3-signing/uflinux.ec" -pubout \
+  -out "$HOME/.config/uflinux3-signing/uflinux.ec.pub"
+```
+
+Přidejte **Obsah souboru PEM** – ne cesty, ne base64 – jako tajemství akcí
+`APK_SIGNING_PRIVATE_KEY` a `APK_SIGNING_PUBLIC_KEY`. Cokoli, co není klíčem EC P-256 nebo
+P-384 – například nahraný pár RSA – je spíše odmítnuto než tiše přijato. Viz [Nastavení
+úložiště](./repository-setup.md).
+
+Úložiště aplikací, které publikuje `uflinux-files`, je podepsáno klíčem **oddělit**,
+`uflinux3.ec384.pub`, který `uflinux-release` instaluje a který je také publikován vedle
+indexu aplikací.
+
+## Podmínky publikování
+
+Publikace je serializována a vyžaduje ověření balíčků a desktopů pro každou architekturu plus
+skutečné zprávy o instalaci a restartu ISO pro každý nakonfigurovaný režim firmwaru – v
+současnosti dvojice x86_64 BIOS a UEFI. To pak:
+
+1. připravuje vydání **návrh**,
+2. nasadí kompletní podepsané úložiště Pages,
+3. publikuje koncept až po úspěšném nasazení.
+
+Pokud se nasazení nezdaří, vydání zůstane konceptem a lze jej zkusit znovu. Čerstvý klient
+ověří podepsané rozvržení stránek před nasazením – včetně upgradu defaults-package z nejstarší
+zachované verze, pokud taková existuje – a stejné kontroly se znovu spustí proti veřejnému
+úložišti HTTPS, než se koncept stane veřejným. První vydání zaznamená, že neexistuje žádná
+dřívější verze, a počáteční veřejný klíč je připnut k ověřenému klíči obrazu, nikoli
+důvěryhodný ze samotné sítě.
+
+Stránky a vydání jsou samostatné služby, takže se nejedná o atomickou transakci cross-service.
+
+## Uchovávání výstupů a limity
+
+Úložiště uchovává aktuální generaci a **dvě předchozí generace** vlastních souborů APK. Další
+publikace načte svou historii ze stávajícího úložiště Pages. Upstream balíčky a ISO nejsou
+hostovány na Pages.
+
+Publikování odmítá užitečné zatížení stránek přes 900 MiB a jednotlivé aktivum vydání o
+velikosti 2 GiB nebo vyšší a pojmenuje problematický soubor. ISO na **1900 MiB** nebo vyšší je
+místo toho označeno jako varování, takže vydání neselže na velikosti, která již byla viditelná
+v předchozím spuštění; každý obrazový záznam také ukládá přesnou délku ISO jako `iso_bytes`.
+Archivy vstupů a mezipaměti kompilátoru multi-architecture zabírají značné úložiště artefaktů,
+proto zkontrolujte využití úložiště a nastavení uchovávání svého účtu. Klíče mezipaměti
+kompilátoru Per-run umožňují ukládání postupu po neúspěšném nebo přerušeném sestavení.
+
+Vstupy pro opětovné sestavení zůstávají dostupné jako artefakty pracovního postupu během
+nakonfigurované doby uchování; inventáře balíčků a záznamy testů zůstávají v obraze a
+artefaktech VM. ISO jsou publikovány pouze po úspěšném odeslání každého vstupu a ověření.
+
+## Obrazy pro zařízení v CI
+
+`device-images` je maticová úloha, která běží pouze na značkách verze a na ručních
+spouštěních, kde je zaškrtnuto **Vytvářejte obrazy zařízení**. Znovu používá artefakty
+kompilace, podepisuje balíčky a sestavuje jeden obraz na dvojici cíle zařízení a
+architektury – šest cílů v `config/devices.json` – maximálně čtyři najednou. Experimentální
+záznamy používají `continue-on-error`, takže jejich protokoly a artefakty se publikují bez
+selhání vydání.
+
+`device-assets` spouští **po** `publish` a nahrává obrazy, kontrolní součty a atestace do
+vydání already-published. Protože běží jako poslední a nese označení `continue-on-error`,
+problém se zařízením nemůže nikdy nechat vydání zveřejněné napůl.
+
+## Ověření publikovaných artefaktů
+
+```sh
+sha256sum -c SHA256SUMS
+gh attestation verify uflinux-0.1.0-x86_64.iso --repo OWNER/REPO
+gh attestation verify uflinux-0.1.0-rpi-aarch64.img.zst --repo OWNER/REPO
+```
+
+Obrazy zařízení nejsou uvedeny v `SHA256SUMS`; každý má svůj vlastní postranní vozík
+`.img.zst.sha256`. Před kontrolou aktiva pojmenovaná v `SHA256SUMS` stáhněte.
+
+Úložiště Pages poskytuje `uflinux.ec.pub`; nainstalujte jej pod tímto názvem v `/etc/apk/keys`
+při ruční konfiguraci klienta. Úložiště aplikací je podepsáno samostatným klíčem
+`uflinux3.ec384.pub`, který `uflinux-release` nainstaluje a který je také publikován vedle
+indexu aplikací. Získejte a ověřte počáteční klíče prostřednictvím nezávisle důvěryhodného
+kanálu – kontrolní součet stažený vedle souboru není nezávislé ověření.
+
+<UpstreamSource path="docs/github.md" />

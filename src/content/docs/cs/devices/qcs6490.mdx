@@ -1,0 +1,112 @@
+---
+title: "Desky třídy Dragon Q6A"
+description: "Experimentální obraz qcs6490 pro Arrow Dragon Q6A a podobné desky s QCS6490."
+status: Experimental
+source: docs/device-images.md
+---
+
+import UpstreamSource from '../../../../components/UpstreamSource.astro';
+
+Obraz `qcs6490` cílí na Arrow Dragon Q6A a podobné desky QCS6490. Je to jediný obraz
+zařízení UFLinux, který potřebuje jádro z jiné distribuce, a důvod, proč je označen jako
+experimentální, je specifický a stojí za to mu porozumět, než si jeden flashnete.
+
+## Parametry obrazu
+
+| | |
+| --- | --- |
+| ID desky | `qcs6490` |
+| Desky | Arrow Dragon Q6A a podobné desky QCS6490 |
+| Architektura | aarch64 |
+| Jádro | Nura `linux-postmarketos-qcom-sc7280` |
+| Spouštění | Deska UEFI + `systemd-boot` |
+| Kořenový souborový systém | f2fs, štítek `UFLINUX_ROOT` |
+| Velikost | 6144 MiB nekomprimováno |
+| Stav | Experimentální |
+
+## Proč se nepoužívá jádro Alpine
+
+Některé desky QCS6490 nemají strom zařízení firmware-provided a `linux-lts` od Alpine není ani
+nakonfigurován, ani záplatován pro displej platformy – takže HDMI zůstává černý. To bylo
+pozorováno na skutečném hardwaru: firmware desky dosáhl `systemd-boot` a záznam se načetl, ale
+na obrazovce se nic neobjevilo.
+
+Image tedy provozuje hlavní jádro z **Nura**, distribuce postmarketOS. Dodává vestavěné
+ovladače Qualcomm, stromy deskových zařízení pod `/boot/dtbs` a obraz `linux.efi` zboot, který
+`systemd-boot` načítá přímo.
+
+Ovladač Nura `dtbloader` EFI je také součástí `EFI/systemd/drivers`. Před spuštěním
+`systemd-boot` nainstaluje strom zařízení desky, který pokrývá desky, jejichž firmware žádný
+neposkytuje.
+
+## K čemu slouží Nura
+
+Nura se používá **pouze** jako další zdroj balíčku aarch64 připojený ke konkrétní větvi a
+pouze pro toto jádro a ovladač. Samotný index není připnutý – postmarketOS pravidelně
+přestavuje index větve vydání – takže větev je připínáček. Bootloadery a všechny ostatní
+ovladače pocházejí od Alpine a žádný balíček Nura `device-*` nebyl nikdy nainstalován.
+
+Oba balíčky jsou spíše *vyzvednut a rozbalen* než nainstalovány. Nura dodává svou vlastní
+náhradu `mkinitfs`, která je v konfliktu s náhradou Alpine, a apk řeší vše v
+`/etc/apk/repositories` – když jsou obě viditelné, apk odmítá vybrat jakoukoli sadu balíčků,
+která stahuje jádro. Soubory jsou tedy rozbaleny na svých cestách balíčků a stanou se běžným
+obsahem rootfs bez záznamu Nura v nainstalované databázi.
+
+Dva důsledky, o kterých byste měli vědět:
+
+- Protože je jádro rozbalené, nespustí se žádný háček `update-kernel`. Obrazový profil ručně
+  sestavuje spouštěcí soubory a generuje initramfs s `mkinitfs` Alpine proti rozbalenému
+  stromu `/lib/modules` – postmarketOS je distribuce merged-usr a rozbaluje své moduly pod
+  `/usr/lib/modules`, takže tam profil propojuje `/lib/modules`.
+- Rozbalené balíčky nemají žádné spouštěče a **nelze upgradovat pomocí `apk`**. Chcete-li
+  posunout jádro dopředu, flashujte novější obraz.
+
+## Počáteční fáze spouštění na této desce
+
+- **Initramfs musí být gzip-compressed.** Kontrolované jádro Nura `7.0.8-r0` povoluje
+  `CONFIG_RD_GZIP`, ale deaktivuje `CONFIG_RD_ZSTD`, takže nastavení Zstandard ISO by
+  zabránilo jádru rozbalit raný uživatelský prostor. `qcs6490` tedy nastavuje
+  `initramfs_compression: gzip` v `config/devices.json`; ostatní desky jsou standardně
+  Zstandard.
+- **Firmware pro ovladače built-in je uveden explicitně.** mkinitfs shromažďuje firmware
+  skenováním souborů `.ko`, do kterých kopíruje, takže firmware požadovaný ovladačem, který je
+  zabudován do jádra, nemá žádný `.ko`, který by jej deklaroval, a byl by vynechán. Ovladač
+  QUP I2C (`i2c-qcom-geni`) je zabudován, testuje, zatímco initramfs stále běží, a žádá o
+  `qcom/qcm6490/qupv3fw.elf` předtím, než se připojí kořenový souborový systém – bez něj se
+  sběrnice I2C napájející most HDMI nikdy neobjeví. Desky obsahují seznam takových souborů v
+  `initramfs_files` a profil je předá mkinitfs jako `custom_files`.
+- **Firmware Adreno GPU je také v initramfs.** Ovladač Adreno je také zabudován, takže
+  `a660_sqe.fw`, `a660_gmu.bin` a `qcom/qcs6490/a660_zap.mbn` na desce jsou na stejném
+  seznamu, přenášeny jako soubory Zstandard-compressed. Bez nich může jádro hlásit
+  `adreno_request_fw: failed to load a660_sqe.fw` před připojením root a spuštění vykreslování
+  může selhat, i když textová konzole funguje. To odstraní známé selhání; zrychlená grafická
+  relace stále vyžaduje ověření hardwaru. Zrekonstruované initramfs byly zkontrolovány a
+  všechny čtyři rané soubory firmwaru byly přítomny a neporušené, ale to je důkaz
+  archive-level, ne test desky.
+- **Index modulu se vygeneruje po rozbalení jádra.** Profil na něm vždy spouští `depmod -a`:
+  kontrolovaný balíček Nura `7.0.8-r0` dodává `modules.dep`, jehož položka WireGuard nemá
+  žádné předpoklady, ačkoli modul deklaruje šifrovací a UDP tunelové. Regenerace obnoví
+  závislosti, takže mkinitfs i nainstalovaný `modprobe` nejprve načtou požadované moduly.
+- **Moduly displeje jsou načteny z `/etc/modules`.** Celý řetězec HDMI jsou načítatelné moduly
+  — můstek Dragon Q6A je ve stromu zařízení popsán jako `radxa,ra620`, což generický ovladač
+  `simple-bridge` tvrdí — takže deska je uvádí v `initramfs_modules` a profil je zapisuje do
+  initramfs.
+
+## Síťové připojení na desce
+
+Podpora závisí na tom, jaké rozhraní používáte:
+
+- Ethernetové zařízení USB RTL8153 (`0bda:8153`) je řízeno `r8152`, které potřebuje modul
+  `mii` – další důvod, proč je index závislosti regenerován.
+- Palubní zařízení AIC USB Wi-Fi (`a69c:8d80`) má **žádný odpovídající ovladač** v
+  kontrolovaném balíčku modulu Nura 7.0.8. Firmware nebo `iwd` samotný nedodává chybějící
+  ovladač, takže jádro Wi-Fi na desce není podporováno jádrem tohoto obrazu. Použijte externí
+  adaptér.
+
+## Zápis obrazu
+
+Stejný postup jako u každého obrazu jiného zařízení – viz [Obrazy
+zařízení](./index.md#zápis-obrazu). Přihlaste se jako **user / user** přes HDMI na `tty1`
+nebo na sériovou konzoli `ttyMSM0`.
+
+<UpstreamSource path="docs/device-images.md" />

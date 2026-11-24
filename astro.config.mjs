@@ -60,7 +60,7 @@ export default defineConfig({
 				},
 			],
 			tableOfContents: { minHeadingLevel: 2, maxHeadingLevel: 3 },
-			routeMiddleware: './src/favicon-middleware.ts',
+			routeMiddleware: './src/head-middleware.ts',
 			credits: false,
 			head: [
 				{ tag: 'link', attrs: { rel: 'icon', href: 'https://uflinux.org/favicon.ico', type: 'image/vnd.microsoft.icon', sizes: '32x32' } },

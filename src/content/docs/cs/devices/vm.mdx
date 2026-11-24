@@ -1,0 +1,69 @@
+---
+title: "Virtuální stroje"
+description: "Předinstalovaný diskový obraz UFLinuxu pro QEMU, KVM a další hypervizory."
+status: Supported
+source: docs/device-images.md
+---
+
+import UpstreamSource from '../../../../components/UpstreamSource.astro';
+
+Obraz `vm` je předinstalovaný systém UFLinux pro hypervizory. Na rozdíl od ISO nemá žádnou
+živou relaci a žádný instalátor – napíšete jej, nabootujete a přihlásíte se. Je to
+nejrychlejší způsob, jak spustit plochu v VM, a jediný obraz zařízení, který je vytvořen pro
+x86_64 i ARM64.
+
+## Parametry obrazu
+
+| | |
+| --- | --- |
+| ID desky | `vm` |
+| Hypervizory | QEMU, KVM a další |
+| Architektura | x86_64 a aarch64 |
+| Jádro | Alpine `linux-virt` |
+| Spouštění | UEFI + `systemd-boot` |
+| Kořenový souborový systém | XFS, štítek `UFLINUX_ROOT` |
+| Velikost | 5120 MiB nekomprimováno |
+
+Používá XFS spíše než f2fs, protože virtuální disk nemá žádné z omezení SD karty, pro které
+existuje f2fs – a protože odpovídá souborovému systému nainstalovaného systému ISO.
+
+## Zápis obrazu
+
+Obraz je nezpracovaný disk GPT, takže jej lze použít přímo jako obraz disku:
+
+```sh
+zstd -d uflinux-0.1.0-vm-x86_64.img.zst
+qemu-system-x86_64 \
+  -machine q35 -cpu max -smp 2 -m 2048 \
+  -drive if=pflash,format=raw,readonly=on,file=/usr/share/OVMF/OVMF_CODE.fd \
+  -drive format=raw,file=uflinux-0.1.0-vm-x86_64.img \
+  -netdev user,id=n0 -device virtio-net-pci,netdev=n0
+```
+
+Kořenový oddíl se při prvním spuštění zvětší, aby zaplnil virtuální disk, takže zvětšení
+obrazu před spuštěním vám poskytne místo navíc.
+
+Přihlaste se jako **user / user** – stejný účet, který je dodáván s každým obrazem zařízení –
+a použijte `sudo` nebo `doas` s tímto heslem pro administrativní příkazy. Pozdrav je povolen,
+takže se účet může přihlásit graficky.
+
+## Paměť
+
+Nainstalovaný desktop je vyvinut a přijat proti **512 MiB RAM, jeden displej a žádná výměna**,
+takže malý host je spíše realistický než okrajový. Dejte to víc, pokud chcete pohodlnou relaci
+prohlížeče.
+
+## Secure Boot
+
+Spouštění UEFI funguje, ale tyto obrazy neposkytují registrované podpisy UEFI Secure Boot.
+Spusťte hosta s vypnutým Secure Boot. APK a podpisy modloop jsou samostatné mechanismy a
+nejsou ovlivněny.
+
+## Vztah k obrazu ISO
+
+Obraz `vm` je vytvořen ze stejných podepsaných balíčků jako ISO, ale jedná se o samostatný
+artefakt a je **ne** pokrytý automatizovanými spouštěcími testy BIOS/UEFI, které omezují
+vydání ISO. Pokud chcete artefakt, který CI skutečně spouští, nainstalujte x86_64 ISO – viz
+[Instalace](../installing.md).
+
+<UpstreamSource path="docs/device-images.md" />

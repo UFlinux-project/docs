@@ -1,0 +1,74 @@
+---
+title: "Architektury a spouštění systému"
+description: "Pro které architektury procesorů UFLinux sestavuje ISO a u kterých se ověřuje spouštění."
+source: docs/architectures.md
+---
+
+import UpstreamSource from '../../../../components/UpstreamSource.astro';
+
+UFLinux vytváří balíčky a obrazy ISO pro čtyři architektury Alpine. Důležité upozornění je
+vpředu: **pouze x86_64 ISO je testován při spouštění.** Zbylých pět je vytvořeno a publikováno, ale nikdy
+s nimi není spuštěn žádný virtuální stroj.
+
+## Přehled obrazů ISO
+
+| Alpská architektura | Sestavení balíčku | Zaváděcí testy |
+| --- | --- | --- |
+| x86_64 | nativní (stroj q35) | **BIOS a UEFI** |
+| aarch64 | nativní běžec ARM64 | žádný |
+| ppc64le | qemu-ppc64le | žádný |
+| riscv64 | qemu-riscv64 | žádný |
+
+Spouštěcí test x86_64 se spustí při každém potvrzení, požadavku na stažení, tagu a spuštění
+full-matrix. Vydání vyžaduje zelené zprávy o sestavení pro všechny čtyři architektury a zelené
+zprávy o spouštění pro oba režimy firmwaru x86_64 – brána požaduje pouze testy spouštění,
+které skutečně běží.
+
+## Cílová zařízení
+
+| ID desky | Sestavení balíčku | Spouštěcí firmware | Stav |
+| --- | --- | --- | --- |
+| `pc-f2fs` | nativní běžec x86_64 | BIOS `syslinux` a UEFI `systemd-boot` | podporováno |
+| `pc-xfs` | nativní běžci x86_64 | BIOS `syslinux` a UEFI `systemd-boot` | podporováno |
+| `rpi` | nativní běžec ARM64 | Firmware VideoCore s `config.txt` | podporováno |
+| `vm` | nativní běžce x86_64 a ARM64 | UEFI s `systemd-boot` | podporováno |
+| `qcs6490` | nativní běžec ARM64 | deska UEFI plus `systemd-boot` | experimentální |
+| `spacemit-k1` | qemu-riscv64 | Distro boot U-Boot s `extlinux` | experimentální |
+
+Dva cíle `pc-*` nejsou desky, ale stroje: zapisují na interní disk nebo klíčenku USB,
+spouštějí se přes BIOS nebo x86_64 UEFI a jsou jedinými obrazy, které na stejném disku nesou
+zaváděcí řetězec BIOS a UEFI. Obrazy zařízení jsou doplňkové: postavené na značkách a
+připojené k vydání, ale nejsou součástí brány publikace a žádný nemá nakonfigurovaný test
+spouštění. Viz [Obrazy zařízení](../devices/index.md).
+
+## Co znamená podpora architektury
+
+Tato matice popisuje nakonfigurované sestavení a testovací nastavení, nikoli certifikaci
+fyzického hardwaru.
+
+- Název architektury nezaručuje, že ISO může zavést každou desku pomocí této CPU. Generické
+  ISO ARM potřebují vhodný firmware a nenahrazují tarbally Alpine board-specific Raspberry Pi.
+- Sálové počítače běžně postrádají místní displej. UFLinux poskytuje sériovou konzoli a
+  desktop lze testovat pomocí backendu Wayland bez monitoru. Server remote-desktop se dodává v
+  obrazu, ale je to **ve výchozím nastavení zakázáno**, takže na žádném portu nic nenaslouchá,
+  dokud jej nepovolíte – viz [Vzdálená plocha](../desktop/remote-desktop.md).
+- Testy UEFI běží s Secure Boot **zakázáno**. Tyto obrazy neposkytují registrované podpisy
+  UEFI Secure Boot; APK a podpisy modloop jsou samostatné mechanismy.
+- Grafický zásobník používá zabalená jádra Mesa a Alpine a firmware. Fyzické GPU, Wi-Fi,
+  pozastavení, více displejů, Bluetooth a proprietární ovladače, to vše vyžaduje samostatné
+  testování hardwaru. Služba Bluetooth (BlueZ) a ConnMan WireGuard VPN se dodávají v meta
+  ploše, ale mají pouze ověření fixture-level.
+
+## Kontroly společné pro všechny cíle
+
+Každý cíl spustí během kompilace testy jednotek pracovního prostoru Nastavení (`cargo test
+--workspace --frozen`). Verifikace pak zkontroluje bezhlavý labwc kompozitor, dostupnost
+protokolu foreign-toplevel, mapování terminálu, minimalizaci a zaostření, přežití panelu,
+vytváření snímků obrazovky a hlášení paměti. Chybějící fyzická baterie, síťový nebo zvukový
+hardware není prezentován jako testování physical-device.
+
+Testy x86_64 VM provádějí skutečné spouštění OpenRC, síťový přístup k balíčku, ověřování
+instalátoru, připojení XFS, nastavení uživatele a hesla, zachování nesouvisejícího oddílu a
+nainstalované spouštění.
+
+<UpstreamSource path="docs/architectures.md" />

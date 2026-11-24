@@ -1,0 +1,78 @@
+---
+title: "Jak přispět"
+description: "Jak přispět k UFLinuxu, od hlášení chyb v dokumentaci až po zasílání změn balíčků."
+---
+
+UFLinux je malý projekt s úzkou testovací plochou, takže nejužitečnější příspěvky jsou ty
+úzké.
+
+## Kam hlásit problémy a posílat změny
+
+| Problém | Kde? |
+| --- | --- |
+| Na těchto stránkách je něco špatně nebo chybí | [UFlinux-projekt/dokumenty](https://github.com/UFlinux-project/docs/issues) |
+| Distribuce, balíčky, obrazy, instalační program | [`UFlinux-project/uflinux`](https://github.com/UFlinux-project/uflinux) |
+
+Při hlášení hardwarového problému řekněte, jakou architekturu a režim firmwaru jste použili a
+zda jste používali obraz ISO nebo obraz zařízení. "Nebootuje" na riscv64 je očekáváno a není
+to stejné jako "nebootuje" na x86_64 – viz [Architektury a
+bota](../reference/architectures.md).
+
+## Než změníte distribuci
+
+Nejprve spusťte kontroly úložiště:
+
+```sh
+python3 scripts/check.py
+shellcheck -S warning scripts/*.sh profiles/*.sh tests/*.sh
+actionlint -config-file .github/actionlint.yaml .github/workflows/build.yml
+```
+
+Konfigurace actionlint rozpozná zdokumentované štítky běžců Ubuntu, protože jeho seznam běžců
+built-in může zpožďovat vydání GitHubu. Neposkytuje běžce self-hosted; pracovní postup nadále
+vyžaduje běhouny GitHub-hosted.
+
+Pak si přečtěte [Budování](./building.md) pro stupně a pravidla work-directory a
+[Údržba](./maintenance.md) pro to, co změna na připojeném vstupu znamená. Změna na ConnMan,
+prostředí desktopu, obrazy runnerů, QEMU, firmware nebo jádro Alpine znamená, že příslušné
+testy musí projít znovu – neúspěšné cíle nejsou označeny jako volitelné, aby došlo k vydání.
+
+## Příspěvky do dokumentace
+
+Tyto stránky jsou reader-facing přepisem vývojářských poznámek v `uflinux`, takže dobrý
+příspěvek k dokumentům má obvykle jednu z těchto forem:
+
+- chybějící krok nebo nesprávný příznak v proceduře;
+- tvrzení, které přehání to, co ve skutečnosti tvrdí upstream — projekt si dává pozor na
+  hedging a stránka, která říká „podporováno“, kde upstream říká „built but never booted“ je
+  chyba;
+- vylepšení českého překladu.
+
+Stránky odvozené z upstreamu nesou pole `source:` frontmatter a odkaz na přesný upstream
+soubor ve spodní části. Pokud jeden změníte, ponechte oba na místě.
+
+### Úpravy tohoto webu
+
+Stránka je [Astro Starlight](https://starlight.astro.build). Anglické stránky žijí přímo v
+`src/content/docs/`, české překlady v `src/content/docs/cs/` se zrcadlenými slugs, takže
+nepřeložená stránka se vrátí do angličtiny spíše než 404ing.
+
+```sh
+npm install
+npm run dev        # local preview
+npm run check      # type and content check
+npm run build      # production build into dist/
+```
+
+Postranní panel je v `sidebar.mjs` definován explicitně, nikoli automaticky, takže nová
+stránka tam také potřebuje záznam — s českým štítkem v `translations` — jinak se v navigaci
+nezobrazí.
+
+Nasazení je Cloudflare Pages připojené k úložišti; nastavení sestavení najdete v úložišti
+README.
+
+## Licence vašeho příspěvku
+
+UFLinux skripty, nastavení a konfigurace jsou `GPL-3.0-only`, odpovídající licenci úložiště.
+Cokoli, co přispějete do distribuce, spadá pod to. Dokumentace v tomto úložišti je pod stejnou
+licencí.

@@ -1,0 +1,210 @@
+---
+title: "Záznam ověření"
+description: "Rozsah provedených testů, naměřené hodnoty a oblasti, které zatím nebyly ověřeny."
+source: docs/validation.md
+---
+
+import UpstreamSource from '../../../../components/UpstreamSource.astro';
+
+Tato stránka je upřímnou odpovědí na otázku „jak dobře to funguje?“. Vše níže je výsledkem
+místního vývoje x86_64, pokud není uvedeno jinak. Nic zde není tvrzení o vašem hardwaru.
+
+## Rozsah ověření
+
+| Oblast | Stav |
+| --- | --- |
+| x86_64 ISO, BIOS a UEFI | Spuštěno, nainstalováno do XFS, restartováno — při každém potvrzení, spuštění PR, tagu a full-matrix |
+| Dalších pět architektur | Postaveno a zveřejněno; **není spuštěno žádné VM** |
+| Obrazy zařízení | Postaveno na značkách; **není nakonfigurován test spouštění** |
+| Fyzické GPU, Wi-Fi, pozastavení, multi-display | Není certifikováno; vyžaduje samostatné hardwarové testy |
+| Bluetooth a WireGuard VPN | Ověřeno vůči zařízením BlueZ a ConnMan VPN, nikoli fyzickému hardwaru |
+| Byte-identical whole-ISO přestavba | Není zavedeno |
+
+Publikace vyžaduje zelené sestavy sestavení pro všechny čtyři architektury a zelené zaváděcí
+zprávy pro oba režimy firmwaru x86_64. Nakonfigurovaný test není důkazem úspěšného spuštění –
+zkontrolujte výsledky pracovního postupu a připojené záznamy sestavení.
+
+## Měření na referenční instalaci
+
+Referenčním cílem je nainstalovaný systém x86_64 s **512 MiB RAM, jeden displej a žádná
+výměna**. Obě cesty firmwaru prošly bootováním ISO, instalací XFS, restartem installed-system,
+uchováním partition-table a kompletní kontrolou hash nesouvisejícího oddílu. Root zůstal
+uzamčen a nainstalovaný účet použil své nové heslo. Ani jeden běh nehlásil OOM.
+
+| Firmware | Živé sériové přihlášení | Komponenty pozadí PSS | Flyout PSS | Kompletní UI PSS |
+| --- | ---: | ---: | ---: | ---: |
+| BIOS | 44.13 s | 6.29 MiB | 31.22 MiB | 34.77 MiB |
+| UEFI | 54.29 s | 6.05 MiB | 31.34 MiB | 34.78 MiB |
+
+Toto jsou měření QEMU software-rendering. Obrazy na pozadí zahrnují službu relace a dočasně
+aktivního privilegovaného pomocníka, nikoli celou plochu. Živé načasování spouštění používá
+samostatný test 2 GiB live-image, nikoli nainstalovaný test 512 MiB.
+
+Nativní bezhlavá měření: služba relace 5.72 MiB PSS, Nastavení UI 36.77 MiB, samotný flyout
+31.24 MiB. Vzorek nečinnosti two-second zaznamenal 0 % CPU pro službu a GUI. První použitelné
+snímky byly 36 ms pro plný UI a 36 ms pro nový proces rozbalení; aktivace teplého rozbalení ve
+stávajícím GUI trvala 6 ms. Jedná se o místní měření process-launch se zachováním mezipaměti
+sestavení, nikoli o hardwarový benchmark disk-cache-cold.
+
+Rozpočty jsou ≤ 16 MiB PSS pro komponenty nastavení na pozadí, ≤ 80 MiB pro úplné UI a ≤ 64
+MiB pro plovoucí verzi, s cílovým rámem použitelným za studena 1.5 s a teplým 500 ms. To jsou
+nativní referenční cíle, nikoli záruky emulovaného načasování.
+
+Odizolované spustitelné soubory: `uflinux-settings` 989,176 B, `uflinux-settingsctl` 735,328
+B, `uflinux-settingsd` 1,370,184 B, `uflinux-settings-system` 775,912 B, Ironbar 6,703,128 B.
+Tyto artefakty dodaly Ironbar jako svůj hlavní panel; aktuální strom jej nahradí shellem
+in-repo `uflinux-desktop` a čísla jsou zachována tak, jak byla zaznamenána.
+
+## Co testy skutečně ověřují
+
+- Skutečná bezhlavá správa výstupu labwc: test a aplikace, přesné režimy, odmítnutí
+  last-display, termín 15-second, vrácení caller-loss, dílčí škálování, rotace, hotplug a
+  saved-layout záložní.
+- Předplatné PipeWire přes výstupy, výchozí nastavení, hlasitost, ztlumení, nahrávání a
+  přehrávání a opětovné připojení po restartu `pipewire-pulse`.
+- Řízené zařízení ConnMan D-Bus pro pověření, zrušení, napájení sítě, adresování, DNS, proxy a
+  zapomínání – to **ne** certifikuje bezdrátové spojení.
+- Testy s `mac80211_hwsim` a hostapd ověřují WPA2 Personal, WPA3 SAE, skryté sítě,
+  PEAP/MSCHAPv2, TTLS/PAP a EAP-TLS. Kontrolují DHCP, opětovné připojení, odebrání sítě,
+  obnovení tras, zachování nesouvisejících tras a odmítnutí při neshodě domény serveru.
+- Klient SNTP ConnMan proti řízenému serveru jako jediný synchronizátor, který hlásí aktuální
+  stav jádra.
+- Skutečný vstupní analyzátor BusyBox `acpid` v soukromém chrootu: pouze stisknutí power-key
+  vyvolá zavěšení; uvolnění, opakování a nesouvisející události jsou ignorovány. Nainstalovaný
+  VM ověřuje skutečné TLP přechody a physical-key Nedělat nic a vypnout chování.
+- Podepisování: rezignace na zachované užitečné zatížení; poškozené archivy a neshodné klíče
+  byly odmítnuty; dočasné soukromé klíče byly odstraněny při úspěchu a neúspěchu.
+- Opakujte sestavení: všechny vlastní ovládací prvky APK a užitečné zatížení dat se shodovaly
+  po nové přestavbě kompilátoru, s výjimkou signatur.
+- Zachování konfigurace: upravené výchozí hodnoty systému přežily reinstalaci balíčku a
+  generování simulovaných předchozích výchozích hodnot bylo upgradováno bez nahrazení místních
+  úprav. To je simulovaná předchozí generace, nikoli dříve publikované vydání UFLinux.
+
+Balíčky Test-only hostapd a dnsmasq nejsou závislé na desktopu a interpret Pythonu
+nainstalovaného testu je závislostí svazku, nikoli závislostí installed-desktop. Chybějící
+testovací zařízení spíše selhávají, než aby si tiše nárokovali pokrytí.
+
+## Spotřeba paměti živého obrazu
+
+Živý root rozbalí plochu a celé téma ikon Papirus do souborů tmpf, jejichž výchozí kapacita je
+75 % RAM. Současná sada balíčků Papirus, umělecká díla a téma využívá asi 993 MiB v živém
+kořenu. Živý host o velikosti 2 GiB vyčerpal svůj kořenový souborový systém během spouštění,
+takže živé testy přidělují 4 GB. Runner explicitně odmítá boot-time APK selhání databáze a
+paměti jádra a zaznamenává kapacitu bajtů a inodů.
+
+## Jednotné pracovní prostředí
+
+Sjednocená plocha je výchozí relací: `uflinux-autostart` spustí `uflinux-desktop --supervise`
+a panel Ironbar, který nahradil, již není zabalen. Nespouštějte druhou plochu vedle vlastního
+hlavního panelu relace – obě poskytují služby panelů a panelů.
+
+Jeho práce s pamětí porovnávala náhradu s tímto starším panelem jako základní, se třemi
+relacemi na implementaci: střední proporcionální velikost process-set klesla z 86.8 na 73.5
+MiB, jakmile se ustálila, a z 89.2 na 75.9 MiB po jednom průchodu všemi čtyřmi nabídkami, obě
+o 15 % oproti požadavku na 10 %. Žádná náhradní relace si neudržela více než 0.4 MiB během 100
+cyklů, u žádné se nezvýšil počet deskriptorů a nečinnost stolního počítače CPU dosáhla vrcholu
+na 0.067 %.
+
+Karty quick-settings a oznamovací plochy jsou kontrolovány testem protokolu, který potvrzuje
+štítky karet Wi-Fi, Ethernet, Bluetooth a VPN, karty Output a Input audio a identické rozsahy
+oken napříč přepínači karet. Samostatný test zařízení testuje démona proti zařízením BlueZ a
+ConnMan VPN, zahrnuje napájení adaptéru, skenování, párování, důvěřování, připojení a odpojení
+plus import, připojení a odebrání WireGuard a kontroluje, zda se importovaný soukromý klíč
+nikdy neodešle zpět. Fáze hlavního panelu zasadí `taskbar.json`, restartuje démona a vyžaduje,
+aby soubor přežil beze změny, pak soubor poškodí a vyžaduje, aby se démon spustil i tak bez
+vyskakovacího okna.
+
+Bezhlavý kabel také spouští fáze integrace Files: `UFLINUX_TEST_FILES_INTEGRATION` s
+vestavěným poskytovatelem souborů a démonem vyhledávání kontroluje spuštění a umístění ikon na
+ploše, restart poskytovatele a výsledky aplikací, souborů a složek v Start;
+`UFLINUX_TEST_FILES_FALLBACK` s binárním souborem vytvořeným pomocí funkce `desktop-icons`
+ověřuje převzetí nativního rendereru; a `UFLINUX_TEST_ICON_MEMORY` v kombinaci s integračním
+testem zkontroluje rozpočet 12 MiB rezidentního shellu na 200 ikon bez požadavků na miniatury.
+
+Zabalená relace dodává rozvržení ovládání oken, které poskytuje každé aplikaci všechna tři
+tlačítka. Přepsání gschema `button-layout` plus odpovídající `gtk-decoration-layout` v systému
+`settings.ini` pokrývá dekorace client-side a `<theme><titlebar><layout>` v `labwc-rc.xml`
+pokrývá dekorace server-side. Tento soubor nastavení je nainstalován dvakrát, pod
+`/etc/xdg/gtk-{3,4}.0` a `/etc/gtk-{3,4}.0`: sada nástrojů čte kopii sysconfdir bezpodmínečně,
+zatímco kopie XDG je nalezena pouze tehdy, když `XDG_CONFIG_DIRS` stále ukazuje na `/etc/xdg`;
+pokud se nic nevyřeší, GTK se vrátí ke svému built-in `menu:close` a aplikace zobrazí pouze
+tlačítko pro zavření. per-user `~/.config/gtk-{3,4}.0/settings.ini` vždy vyhraje a aplikace,
+která si nastaví vlastní rozvržení dekorace, toto nastavení ignoruje. Všimněte si, že labwc
+pojmenovává tlačítka `iconify` a `max`, kde GTK používá `minimize` a `maximize`. Toto je
+konfigurace, ne chování prototypu, a bezhlavý postroj je nevyužívá.
+
+Tyto údaje pocházejí z jednoho prostředí headless-pixman na jednom jádře a jsou schválením
+vydání **ne**. Kolektor neměří latenci interaktivních snímků, widget nebo nárůst předplatného
+D-Bus, skutečná zvuková zařízení, sestavení multi-architecture nebo nainstalovaný low-memory
+VM.
+
+## Otevřené otázky
+
+Fyzická zařízení Wi-Fi, akcelerace GPU, HDR, VRR, DDC/CI, podsvícení notebooku, přechody
+baterie a pozastavení/obnovení vyžadují samostatné hardwarové testy – viz [Ověření fyzického
+hardwaru](#ověření-na-fyzickém-hardwaru). Podpora zavádění obecné architektury neznamená, že
+tyto funkce fungují na každé desce. Ostatní architektury CPU a upgrady public-repository
+zůstávají lokálně neověřeny. Srovnání Clean-build pokrývají nepodepsané ovládání APK a
+užitečné zatížení dat, nikoli celé ISO byte-identical nebo toky podepisování.
+
+## Ověření na fyzickém hardwaru
+
+QEMU a bezhlavé testy stanoví chování softwaru. Nemohou nastavit aktivaci panelu HDR nebo VRR,
+spolehlivost I2C, chování firmwaru notebooku nebo fyzické obnovení. Postup je spustit z
+nainstalovaného desktopu UFLinux na každém referenčním zařízení:
+
+- **Grafika** — zkontrolujte renderer v Displays and About, aktuální GPU a ovladač, normální
+  spuštění a odhlášení, podporované Vulkan a OpenGL plus záložní software. Nakonfigurovaný
+  renderer není důkazem hardwarové akcelerace.
+- **Snímek obrazovky** — zaznamenejte plochu na desku, jejíž kodérem je zařízení Qualcomm
+  Iris/Venus V4L2 (například Arrow Dragon Q6A) a zkontrolujte výsledek, zda na pravém a
+  spodním okraji nejsou artefakty výplně. Záchytná vyrovnávací paměť je tam zarovnána na 128 x
+  32, takže správný záznam má čisté okraje při jakémkoli rozlišení.
+- **Displeje** — použijte přesné inzerované obnovovací režimy, změnu měřítka, rotaci a
+  uspořádání; ponechte změnu nepotvrzenou pro kontrolu vrácení 15-second; odpojte a znovu
+  připojte, abyste potvrdili, že se použitelný displej obnoví a vrátí se uložené rozvržení.
+- **VRR** — ověřte pomocí indikátoru obnovení na panelu nebo pohybujícího se testovacího
+  vzoru. Samotná podpora protokolu není fyzickým průchodem VRR.
+- **HDR** — použijte globální volbu HDR labwc s kompatibilním hardwarem Vulkan a zaznamenejte
+  pozorování. Aplikace si nenárokuje hlásit aktivaci per-monitor.
+- **Jas** — otestujte vnitřní podsvícení v Nastavení a plovoucí nabídce a poté pomocí
+  hardwarového klíče; test monitor-specific DDC/CI, během požadavku se odpojte a znovu
+  připojte. Fyzické změny monitor-button vyžadují opětovné naskenování.
+- **Moc** — přepněte všechny tři režimy TLP a restartujte počítač, abyste zkontrolovali
+  vybrané výchozí nastavení; otestujte přechody nabíječky a každou fyzickou akci power-button
+  na AC a baterii; kontrola inhibitorů, pozastavení, obnovení a vytváření sítí a zvuk po
+  obnovení.
+
+Zaznamenejte výsledky jako JSON with optional keys `hardware_gpu`, `vrr`, `hdr`, `ddc_ci`,
+`backlight`, `battery`, `suspend_resume`, each with a `status` of `pass`, `fail`,
+`unavailable` or `unverified` plus `notes` identifying device, method and observation. Pak
+spusťte:
+
+```sh
+python3 scripts/hardware-record.py --results results.json
+```
+
+Záznamník čte stav a metadata; nemění nastavení hardwaru ani nezahrnuje pověření Wi-Fi. Jeho
+zpráva rozlišuje pozorovanou konfiguraci od důkazů operator-supplied a odmítá fyzické průchody
+na známém hardwaru QEMU nebo VM.
+
+Cíle obrazu zařízení zatím nemají žádné důkazy o hardwaru. Když se testuje, zaznamenejte
+alespoň to, že se deska spouští z obrazu napsaného bez re-partitioning, že kořenový oddíl
+narostl na médium při prvním spuštění, sériová konzola a chování getty, vykreslovací modul
+hlášený pracovní plochou a zda displej vůbec funguje. Očekává se, že obraz SpacemiT K1
+nebude mít žádný výstup zobrazení s aktuálním stromem zařízení hlavní řady.
+
+## Historické artefakty
+
+Počáteční vývojové sestavení bylo zkontrolováno 8. listopadu 2026: 24 testů úložiště, 30
+upstreamových testů Ironbar s vybranými funkcemi, ShellCheck a actionlint, úspěšné abuild
+runtime, ladění, dokumentace a dílčích balíčků distribuce, schema-valid SPDX 2.3 kořenová
+kontrola a nová runtime kontrola. Tento ISO měl 918 552 576 bajtů s SHA-256
+`7b1e22f21357e560c513aa07937662db60de0c9803f9cedc1f6e6369cd382992` a používal **vývojový
+podpisový klíč** a příklad aktualizace URL.
+
+Pozdější vývojové ISO – s nastavením, pak předlohou a poté splash – jsou zaznamenány upstream
+s vlastními hodnotami hash a velikostmi. Každý popisuje svůj vlastní artefakt; historické
+kontrolní součty ISO v těchto dokumentech nejsou měřením aktuálního sestavení.
+
+<UpstreamSource path="docs/validation.md" />

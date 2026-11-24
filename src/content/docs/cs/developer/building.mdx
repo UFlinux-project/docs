@@ -1,0 +1,220 @@
+---
+title: "Sestavování"
+description: "Jak místně sestavit obrazy UFLinuxu, jaké fáze sestavení probíhají a co najdete v adresáři out/."
+source: docs/building.md
+---
+
+import UpstreamSource from '../../../../components/UpstreamSource.astro';
+
+UFLinux vytváří skutečné balíčky Alpine a poté je sestavuje do obrazů pomocí `mkimage` od
+Alpine. Vše běží z jednoho vstupního bodu, `scripts/build.sh`.
+
+## Požadavky
+
+A disposable Linux host with Python 3.11+, GNU tar, gzip, coreutils, util-linux, network
+access, root privileges, and at least 10 GiB free — more if you keep several builds around.
+
+Architektury Non-native potřebují uživatelskou emulaci QEMU a `binfmt_misc` s příznakem `F`.
+Na Ubuntu runners:
+
+```sh
+# qeme-user-binfmt binfmt-support
+python3 scripts/preflight.py --arch ppc64le
+```
+
+CI staví x86_64 a aarch64 na nativních běžcích a emuluje ppc64le a riscv64.
+
+Spusťte privilegovaná sestavení na stroji, který jste ochotni zničit. Prostředí chroot pro sestavení zpřístupňuje `proc`
+a vybrané uzly zařízení. Sysfs hostitele zůstává nedostupný. Chroot pro sestavení
+neposkytuje izolaci před škodlivým zdrojovým kódem.
+
+## Základní příkaz
+
+```sh
+export APK_REPOSITORY_URL=https://repo.uflinux.org/apk/v3.24/uflinux
+sudo --preserve-env=APK_REPOSITORY_URL bash scripts/build.sh --arch x86_64
+```
+
+`APK_REPOSITORY_URL` je volitelné: sestavení z výchozího úložiště distribuce na
+`https://repo.uflinux.org/apk/v3.24/uflinux` a ostatní úložiště odvozují
+`https://OWNER.github.io/REPO/apk/v3.24/uflinux` z `GITHUB_REPOSITORY`.
+
+`--stage` přijímá `bootstrap`, `packages`, `sign`, `image`, `device`, `verify` nebo `all`.
+Stupně sdílejí `--workdir` (výchozí `.state`) a `--outdir` (výchozí `out`); download, APK,
+Cargo a mezipaměť kompilátoru používají `--cache` (výchozí `.cache/build`). **Změna lockfile
+vyžaduje nový pracovní adresář**, i když ověřené stahování lze znovu použít. Po každé kompilaci dostanou mezipaměti Cargo a
+kompilátoru práva pro čtení všemi uživateli. Nástroj abuild jim nastavuje UID 1000
+a práva 640, takže uživatel hostitele by je jinak nemohl archivovat ani obnovit.
+
+S `--device TARGET`, `device` (nebo `all`) sestaví instalovaný obraz disku zařízení namísto
+ISO – viz [Obrazy zařízení](../devices/index.md).
+
+## Co uzamyká soubor se závislostmi
+
+Soubor `config/sources.lock.json` připíná kontrolní součty minirootfs a archivů revizí
+převzatých zdrojů (aports, ConnMan, gnome-backgrounds, gpu-screen-recorder, backend
+portálu GTK4, motivy labwc a ReGreet). Určuje také volby funkcí a výchozí časové razítko
+zdrojů. Stažené soubory se kontrolují při každém opětovném použití.
+
+Sekce `apps` připíná vlastní úložiště aplikací UFLinux, které publikuje `uflinux-files`: jeho
+URL, podpisový klíč, klíč hash a indexované architektury. Samotný index nemá připnutý kontrolní součet, protože
+repozitář se znovu publikuje při každém sestavení balíčků. Stabilním odkazem je jeho URL.
+Stejný postup platí pro repozitář Nura používaný u obrazu QCS6490. `scripts/check.py` ověřuje kolíky
+a shodu `aports/uflinux/uflinux3.ec384.pub` s publikovaným klíčem a
+`scripts/check-packages.py` re-checks aktuální indexy. Architektury, které úložiště aplikací
+neindexuje, je nikdy neuvádí, protože apk selže na řádku nedostupného úložiště.
+
+Oficiální repozitáře Alpine zůstávají na jmenované stabilní větvi, takže si lze vyzvednout
+bezpečnostní revize. Vyřešené verze balíčků a hash jsou zaznamenány, ale připnutý minirootfs
+**ne** zmrazí tyto repozitáře.
+
+## Fáze sestavení
+
+Vlastní soubory APK Forty-seven jsou sestaveny v devíti původech:
+
+| Původ | APK |
+| --- | --- |
+| `musl` | knihovna UFLinux C: runtime, dev, debug, utils, libintl (pět) – viz [UFLinux musl](./musl.md) |
+| `connman` | opraveno ConnMan: runtime, OpenRC, dev, docs, debug (sedm) |
+| `uflinux-regreet` | ReGreet (jeden) |
+| `xdg-desktop-portal-gtk4` | backend portálu GTK4 (jeden) |
+| `gpu-screen-recorder` | opravený rekordér: runtime, dev, docs, debug (čtyři) |
+| `uflinux-settings` | GUI, desktop shell, screencapture tool, instalátor UI, daemon/CLI, systémový pomocník, OpenRC, dokumentace, ladicí symboly (devět) |
+| `uflinux-rds` | Vzdálená plocha: runtime, ladění, dokumentace, server, webový klient, systémový pomocník, VAAPI backend (sedm) |
+| `uflinux` | distribuční balíčky (jedenáct) |
+| `simp1e-cursors` | schéma Simp1e a jeho varianta Adwaita-dark (dvě) |
+
+Přidělený upstream zdroj ConnMan a patche kompatibility Alpine jsou zachovány se vstupy
+sestavení.
+
+| Jeviště | Co to dělá |
+| --- | --- |
+| `bootstrap` | Připraví kořenový a toolchain. |
+| `packages` | Root nainstaluje závislosti receptur pomocí `SUDO_APK=apk abuild -F deps`; neprivilegovaný builder spouští prostý `abuild` – ověření závislostí, uzamčené načítání nákladu, sestavení a testy zmrazeného vydání, podepisování vývoje. Root poté odstraní dočasné závislosti, a to i po selhání. Tím se vyhnete cílovým pomocníkům setuid, kteří se nemohou povýšit pod uživatelskou emulací QEMU. |
+| `sign` | Ověřuje příchozí vývojové signatury, nahrazuje pouze tok signatur APK v2, podepisuje indexy a ověřuje výsledky. |
+| `image` | Alpine `mkimage` s vlastním profilem, mezipamětí APK a reprodukovatelným konfiguračním překryvem. Viz [Komprese Boot-image](./compression.md). |
+| `device` | S `--device`: nainstaluje sadu balíčků cíle do samostatného chrootu, nakonfiguruje nainstalovaný systém, regeneruje initramfs bez modloop a zapíše nezpracovaný obraz GPT bez smyčkových zařízení nebo připojení. Sestavený disk je re-read a před kompresí zkontrolován na geometrii, identifikátory, spouštěcí soubory a kompresi initramfs. |
+| `verify` | Nainstaluje vlastní balíčky prostřednictvím apk, otestuje bezhlavou plochu a ovládací prvky nejvyšší úrovně oproti rezidentnímu prostředí pracovní plochy (panely quick-settings, nabídka Start a kreslení tapety), zkontroluje architekturu a propojení knihoven každého dodávaného spustitelného souboru a procvičí zabezpečení instalátoru. Spouštění firmwaru a instalace disku jsou samostatné úlohy VM. |
+
+## Sestavení jednoho balíčku
+
+Použijte stejný vstupní bod a opakujte nezávisle pro každý z devíti počátků:
+
+```sh
+sudo --preserve-env=APK_REPOSITORY_URL bash scripts/build.sh --arch x86_64 \
+  --stage packages --package uflinux-settings
+sudo --preserve-env=APK_REPOSITORY_URL python3 scripts/reproducibility.py \
+  --arch x86_64 --version 0.1.0 --package uflinux-settings
+```
+
+`--package` automaticky používá `.state/ORIGIN` a `.cache/build/ORIGIN` a zapisuje se pod
+`out/package-shards/ARCH/ORIGIN`. Sdílená práce a adresáře mezipaměti musí zůstat oddělené pro
+souběžná sestavení. Shards podporují pouze `packages` a `bootstrap` a nikdy neobdrží
+uvolňovací klíče.
+
+Poté, co každý původ uspěje, shromážděte výstupy před `sign`, `image` a `verify`:
+
+```sh
+python3 scripts/merge-packages.py --arch x86_64 --version 0.1.0
+```
+
+Kolekce odmítá chybějící soubory APK, zastaralé hashe, smíšené potvrzení zdroje, různá
+nastavení sestavení a neúplné nativní důkazy reprodukovatelnosti. Každý nativní původ musí mít
+nejprve svůj report clean-rebuild. Paralelní sestavení uchovávají soubory APK sestavení,
+vstupy nákladu a zdroje samostatně pod `out/inputs/ARCH/ORIGIN`, s původem v názvu aktiva
+vydání; sekvenční sestavení zachovávají původní formát four-archive.
+
+GitHub zkompiluje devět zdrojů nezávisle: požadavek na stažení nebo push `main` naplánuje
+devět úloh kompilace (pouze x86_64) a značka vydání nebo full-matrix naplánuje ruční spuštění
+fifty-four – jeden na architekturu a původ – s maximálně osmi úlohami kompilace najednou.
+Každý původ má svůj vlastní VM, vývojový podpisový klíč, časový limit a mezipaměť.
+
+## Výstupy
+
+| Adresář | Obsah |
+| --- | --- |
+| `out/images/ARCH` | Pojistné vozíky ISO a SHA-256/SHA-512 |
+| `out/devices/ARCH` | Obrazy disků zařízení (`img.zst`) a postranní vozíky SHA-256 |
+| `out/package-shards/ARCH/ORIGIN` | Izolované výstupy kompilace před sběrem |
+| `out/packages/ARCH` | Soubory APK Build-signed a jejich veřejný klíč |
+| `out/repository/ARCH` | Konečné podepsané soubory APK a `APKINDEX` |
+| `out/metadata/ARCH` | Zdrojové a sestavovací záznamy, hashe, seznamy balíčků, inventář SPDX |
+| `out/checks/ARCH` | Bezhlavé protokoly plochy, snímek obrazovky, paměť, výsledek ověření |
+| `out/vm/ARCH/MODE` | ISO, nainstalujte a restartujte protokoly konzoly a výsledek |
+| `out/inputs/ARCH` | Komprimovaný balíček, zdroj a vstupy pro náklad pro přestavbu |
+
+Chcete-li zachovat starší vývojový ISO, vyberte samostatný `--outdir` a nový `--workdir`. Po
+změně vstupů výsledky znovu nepoužívejte.
+
+## Reprodukovatelnost
+
+Sestavení sady `SOURCE_DATE_EPOCH`, UTC, stabilní cesty, normalizovaná metadata tar a gzip bez
+časových razítek; GitHub používá čas potvrzení zdroje. Počátky Rust se skládají z
+`opt-level=s`, osmi kodegenových jednotek, abort-on-panic a dynamicky propojených Alpine
+knihoven. Počátek nastavení navíc vynutí tlusté LTO ve svém `APKBUILD`, čímž přepíše `lto =
+"thin"` pracovního prostoru; ReGreet pouze nastavuje úroveň optimalizace. Sestavení verze
+používají výchozí úroveň debug-info Cargo a Alpine stále rozděluje všechny dostupné symboly
+ladění do ladicích souborů APK. Neexistuje žádné ladění `target-cpu=native` nebo hostitele
+instruction-set.
+
+Při sestavování označených vydání na nativních strojích x86_64 a aarch64 se pro dva
+náročné zdrojové balíčky v Rustu používají další optimalizace. Nastavení kompilují všech
+sedm spustitelných souborů s `opt-level=3`, plným LTO, PGO a BOLT. Profily vznikají při
+práci se soukromou sběrnicí D-Bus a s kompozitorem labwc bez grafického výstupu. Stejnými
+scénáři se ověřují výsledné soubory. Vzdálená plocha postupuje stejně u svých pěti
+spustitelných souborů. Profil získává spuštěním brokeru, přihlášením přes webovou bránu
+a otevřením relace bez grafického výstupu. Spusťte shard tímto způsobem lokálně pomocí `--settings-pgo` nebo `--rds-pgo` na
+odpovídající architektuře. Profily cestují v artefaktu kompilace jako
+`settings-pgo-profiles.tar.gz` a `rds-pgo-profiles.tar.gz` a nativní čisté přebudování x86_64
+je přehraje s novým cílovým adresářem kompilátoru. Dva optimalizované zdroje nikdy nesdílejí
+fragment, takže úloha přehraje maximálně jednu sadu profilů.
+
+Tyto ovládací prvky napomáhají reprodukovatelnosti, ale **byte-for-byte reprodukovatelnost
+není nárokována**, dokud nebyly porovnány dvě čistá sestavení s identicky vyřešenými balíčky.
+Srovnání Clean-build pokrývají nepodepsané ovládání APK a užitečné zatížení dat, nikoli celé
+ISO. Nativní úlohy CI znovu sestavují každý původ s novým cílovým adresářem kompilátoru a
+porovnávají každý vlastní řídicí a datový tok APK s výjimkou signatur; publikování vyžaduje,
+aby tato sestava přesně odpovídala publikované sadě nativních balíčků.
+
+Chcete-li rekonstruovat starší sestavení, použijte jeho zdrojové potvrzení a zaznamenanou
+epochu, rozbalte vstupní mezipaměti a vyřešte zaznamenané revize APK z uložených balíčků.
+Pokud zrcadla tyto revize zrušila, vytvořte místní podepsané úložiště z uchovaných souborů APK
+a použijte jej explicitně. Výchozí příkaz řeší aktuální balíčky ze stabilní větve — nejedná se
+o režim přehrávání offline.
+
+## Soupis SPDX
+
+Soubor SPDX obsahuje soubory APK fyzicky svázané v ISO, včetně balíčků dostupných pro
+instalaci, ale neinstalovaných při živém spouštění. Není to tvrzení, že každý balíček uložený
+v mezipaměti běží. Publikace vyžaduje, aby se každý vlastní balíček, který není dílčím
+balíčkem `-dbg`, `-doc` nebo `-dev`, objevil v tomto inventáři se stejným kontrolním součtem
+jako publikovaný APK. Výjimkou je device-only nastavený v `ISO_EXCLUDED_PACKAGES`
+(`scripts/builder.py`), aktuálně `uflinux-device`: tyto soubory APK jsou vytvořeny, podepsány
+a publikovány, takže je lze nainstalovat pomocí diskových obrazů zařízení z úložiště vydání,
+ale živý systém je nikdy nestáhne, takže jejich vyžadování v ISO by zablokovalo každé vydání.
+Podbalíček rozdělený pod vlastní příponu nezíská žádnou automatickou závislost na svém hlavním
+balíčku, takže takový recept musí nějakou deklarovat — jinak je hlavní balíček publikován, ale
+nikdy se nenainstaluje a vydání je odmítnuto. Původní licenční poznámky APK jsou zachovány v
+`licenseComments`; `licenseDeclared` a `licenseConcluded` používají `NOASSERTION`, protože
+alpské anotace mohou obsahovat řetězce non-SPDX a inventář neuhodne, jak je reinterpretovat.
+
+## Pracovní prostor Nastavení
+
+Nastavení, prostředí plochy a nástroj pro snímání obrazovky sdílejí `settings/Cargo.lock`.
+Jejich uživatelská rozhraní odkazují GTK4; služba relace a privilegovaný pomocník ne. `cargo
+auditable` zaznamenává data závislosti. Nabídka Start není samostatná bedna: její zdroje žijí
+v `settings/start-menu/src` a jsou zkompilovány do `uflinux-desktop` s deklaracemi modulu
+`#[path]`, takže hlavní panel, jeho panely a nabídka Start jsou jeden proces.
+
+## Po úpravě Nastavení
+
+```sh
+cargo fmt --manifest-path settings/Cargo.toml --all
+python3 scripts/check.py
+```
+
+Při změně verze nastavení spusťte `python3 scripts/settings-source.py --update`. Příprava
+sestavení odstraňuje pouze artefakty kompilátoru project-crate, takže normalizovaná časová
+razítka zdroje neznečišťují otisk prstu Cargo a mezipaměti závislostí přežívají.
+
+<UpstreamSource path="docs/building.md" />

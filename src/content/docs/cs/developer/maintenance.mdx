@@ -1,0 +1,140 @@
+---
+title: "Údržba"
+description: "Aktualizace základu Alpine a připnutých závislostí, správa podpisových klíčů a jejich výměna."
+source: docs/maintenance.md
+---
+
+import UpstreamSource from '../../../../components/UpstreamSource.astro';
+
+UFLinux kolíky na jednu sponu Alpine a udržování tohoto kolíku v dobrém stavu je jádrem
+údržby.
+
+## Používání podporovaného základu
+
+Udržujte pobočku Alpine na aktuálně podporovaném vydání s **podpora `main` i `community`**.
+Desktopové balíčky Alpine z velké části žijí v `community`, jehož podpora končí dříve než u
+`main` – nepředpokládejte, že životnost podpory jádra pokrývá i zásobník desktopů.
+
+## Aktualizace připnutého zdroje
+
+1. Vyberte a zkontrolujte stabilní vydání Alpine a potvrzení aportů. Získejte oficiální
+   minirootfs každé architektury a ověřte její publikované podpisy a hashe.
+2. Aktualizujte verze, archivní adresy URL, hodnoty SHA-256/SHA-512, potvrzení aportů a
+   zdrojovou epochu v `config/sources.lock.json`. Zaznamenávejte neměnná potvrzení a skutečné
+   hodnoty hash archivu – vyhněte se přesunutí větví a značek jako vstupů sestavení.
+3. Aktualizujte verzi Nastavení APKBUILD, zdrojový kontrolní součet a `pkgrel`, když se změní
+   pracovní prostor. Prohlédněte si jeho Cargo lockfile, minimální požadavky na Rust a GTK,
+   názvy funkcí a kompatibilitu labwc. Prostředí pracovní plochy, nabídka Start a nástroj pro
+   snímání obrazovky se vytvářejí ze stejného pracovního prostoru a APKBUILD.
+4. Při změně větví Alpine aktualizujte adresy URL větví v UFLinux APKBUILD a generátor
+   překryvů spolu se souborem zámku a publikační cestou. Znovu zkontrolujte připnutou opravu
+   kompatibility `mkimage` s novým zdrojem.
+5. Aktualizujte verzi balíčku `uflinux` a výchozí verzi distribuce. Vylepšete `pkgrel`
+   dotčeného původu pro změny balení, příznaků nebo oprav bez změny upstream verze a současně
+   aktualizujte přesnou závislost desktopu.
+6. Spusťte `python3 scripts/update-checksums.py` po změně místních aktiv balíčku, zkontrolujte
+   rozdíl, spusťte `scripts/check.py` a poté použijte úplnou matici ručního sestavení.
+7. Před vytvořením značky verze si prohlédněte sestavy balíčku, spouštění a desktopu.
+
+## ConnMan
+
+ConnMan je udržovaný vlastní balíček, nikoli pass-through. Sledujte aktualizace zabezpečení
+ConnMan od Alpine a upstream vydání, aktualizujte jeho uzamčený zdroj, hash a revizi balíčku a
+před vydáním znovu založte malý patch iwd credential-delegation.
+
+Jeho soukromý příznak ovladače musí zůstat omezen na iwd a nesmí se obejít ověřování nebo CA a
+ověření serveru. Dodržujte pravidla D-Bus balíčku: skupina `netdev` může řídit ConnMan, ale
+nesmí mutovat `net.connman.Clock`, a to popření musí zůstat uvnitř zásady netdev, protože
+D-Bus aplikuje konzolové a kontextové zásady v pevném pořadí.
+
+Re-run skutečné testy PEAP, TTLS a TLS – včetně odmítnutí neshody server-domain – před
+zveřejněním změněného síťového zásobníku. Plocha připne testovanou revizi, takže nesouvisející
+oficiální balíček nemůže v tichosti zahodit opravu.
+
+## Cílová zařízení
+
+Desky jsou připojeny v `config/devices.json` a `config/devices.lock.json`. Přidání desky je
+změna konfigurace plus kontrola package-availability; nic ve staviteli se o tom nemusí učit.
+
+Volitelné úložiště Nura je samostatná distribuce. Když je větev Alpine zvednuta, její větev a
+seznam podporovaných architektur musí být re-verified oproti odpovídajícímu vydání Nura, než
+ji může fáze zařízení znovu použít, a seznamy balíčků desky re-checked s
+`scripts/check-packages.py`. Samotný index Nura je **ne** připnutý pomocí hash: postmarketOS
+pravidelně přestavuje index větve vydání, takže větev je pin a balíčky jsou kontrolovány podle
+živého indexu větve.
+
+## Převzetí forku
+
+Nahraďte rezervovanou identitu balíčkovače `noreply@example.invalid` skutečnou identitou
+správce před veřejným vydáním a nastavte projekt balíčku URL do svého skutečného úložiště.
+
+Aktualizace Dependabot připojeny GitHub Actions; připnutý actionlint Go source commit je
+zkontrolován samostatně. Změny obrazů běžců, QEMU, firmwaru, Alpine's kernel nebo desktopového
+shellu vyžadují, aby byly příslušné testy znovu úspěšné — **neoznačujte neúspěšné cíle jako
+nepovinné jednoduše za účelem uvolnění**.
+
+## Podpisové klíče
+
+Bezpečně zálohujte soukromý klíč vydání mimo mezipaměti Git a Actions. Nikdy jej neodesílejte
+ani nenahrávejte `.state`; tento adresář obsahuje vývojové klíče a dočasně obsahuje uvolňovací
+klíč během podepisování. Publikovaná metadata zahrnují pouze veřejné klíče a cesty klíčů,
+nikdy soukromý obsah PEM.
+
+UFLinux podepisuje klíčem **EC P-256 nebo P-384**. Formát apk v2 nemá samostatný podpis
+ECDSA. Nástroj apk-tools 3.0.9 rozpoznává pouze názvy proudů `RSA512`, `RSA256`, `RSA`
+a `DSA` a vybírá důvěryhodný klíč podle **názvu souboru** s veřejným klíčem ve formátu PEM.
+Certifikát X.509 proto jako klíč nepřijme. Signatura EC je proto přenášena v proudu SHA-256 a název proudu
+`RSA256` popisuje tento výtah, nikoli algoritmus. `abuild-sign` to podporuje přímo — přijímá
+jakýkoli soukromý klíč OpenSSL-capable pod `-t RSA256`.
+
+Klíč používá stabilní název souboru `uflinux.ec.pub`, protože signatury apk v2 odkazují na
+tento název souboru. Udržujte stejný klíč ve všech rutinních verzích. Úložiště aplikací je
+podepsáno samostatným klíčem stejné role, publikovaným jako `uflinux3.ec384.pub`; apk řeší
+důvěryhodné klíče podle názvu souboru, takže jeho otočení znamená nahrazení tohoto souboru na
+každém nainstalovaném systému (`uflinux-release` dodává přibalenou kopii) a aktualizaci pinů v
+sekci `apps` `config/sources.lock.json`.
+
+### Výměna klíče
+
+Pro plánovanou rotaci distribuujte náhradní veřejný klíč nainstalovaným systémům
+prostřednictvím nezávisle ověřeného kanálu **dříve** přepínáním podpisového tajemství.
+Nahrazení již důvěryhodného klíče je operace správce; tato verze neimplementuje bezobslužné
+obnovení klíče ani migraci dual-signature.
+
+Zachované old-generation APK musí být také ověřeny se starým klíčem a re-signed s náhradním
+klíčem před zkombinováním do nového úložiště. Vydavatel záměrně selže, pokud se tyto podpisy
+již neshodují, místo aby tiše důvěřoval přibalenému klíči starého snímku, proto mějte
+předchozí klíč a snímek k dispozici během migrace.
+
+Pro neočekávaný kompromis zrušte starý klíč prostřednictvím vašeho ověřeného kanálu vydání a
+balíčků ovlivněných **přestavět**, nikoli pouze neznámé binární soubory re-signing.
+
+## Kontrola reprodukovatelnosti a regresí
+
+Porovnejte jako s podobným: stejný zdrojový commit, zdrojová epocha, rootfs, zdrojové archivy,
+Cargo lockfile, toolchain APK, runtime APK, cesty sestavení a příznaky vydání. Vývojové toky
+signatur se liší, protože vývojové klíče jsou pomíjivé, takže `builder.unsigned_digest()`
+porovnává APK archivy řízení a datové zátěže s vyloučenými toky signatur – stále obsahuje
+kontrolní metadata a časová razítka a shoda pouze se spustitelným souborem je slabší
+kontrolou.
+
+Zaznamenejte základní velikost ISO, binární velikost prostředí desktopu, dobu spouštění a
+plochu RSS z připojených záznamů. Ze slova „lehký“ nevyplývá žádný neměřený minimum-memory ani
+nárok na výkon.
+
+Změny nastavení vyžadují `cargo fmt` a testy zmrazeného pracovního prostoru. Sestavení
+vypočítá kontrolní součet místního zdroje; v případě potřeby aktualizujte verzi Nastavení
+pomocí `scripts/settings-source.py --update`. Shell plochy čte stav sítě, zvuku a napájení
+pouze prostřednictvím backendu Nastavení – nepřidávejte druhého klienta pro stejný hardware.
+Před upgradem zkontrolujte sérii oprav gpu-screen-recorder proti připnutému upstream snímku a
+ponechte si testy originating-monitor nástroje pro zachycení ve svazku stolního počítače.
+
+Před vydáním si přečtěte samostatně PSS, nečinnost CPU, latenci mapped-frame, binární a ISO
+velikost a pokrytí fyzického hardwaru. Úlohy x86_64 BIOS simulovaly Wi-Fi a ConnMan SNTP před
+instalací disku a oba režimy firmwaru x86_64 restartují nainstalovanou plochu s 512 MiB a bez
+swapu; publikace vyžaduje tyto výsledky pro přesný hash ISO kromě devíti sestav sestavování
+balíčků/počítačů. Pouze x86_64 ISO je testován při spouštění; ostatní architektury jsou publikovány bez
+zaváděcí zprávy. Historický záznam staršího vývoje ISO není náhradou za ověření změněného
+zásobníku desktopů.
+
+<UpstreamSource path="docs/maintenance.md" />

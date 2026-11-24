@@ -1,0 +1,84 @@
+---
+title: "Aktualizace a balíčky"
+description: "Jak UFLinux dostává aktualizace, jaké používá repozitáře a jak se vrátit ke starší verzi balíčku."
+sidebar:
+  order: 4
+source: docs/installing.md
+---
+
+import UpstreamSource from '../../../components/UpstreamSource.astro';
+
+Nainstalovaný systém UFLinux je systém Alpine. Aktualizace jsou běžné operace `apk` proti třem
+druhům úložiště: podepsanému repozitáři **UFLinux** nesoucímu vlastní balíčky, odpovídajícím
+větvím Alpine stable **`main`** a **`community`** a menšímu repozitáři **aplikace** UFLinux.
+
+```sh
+doas apk update
+doas apk upgrade
+```
+
+Úložiště UFLinux pro aktuální základní linii je:
+
+```text
+https://repo.uflinux.org/apk/v3.24/uflinux
+```
+
+Vedle toho úložiště aplikací publikuje `uflinux-files`, správce souborů na ploše:
+
+```text
+https://apps-repo.uflinux.org/apk/v3.24/uflinux-apps
+```
+
+Úložiště aplikací poskytuje balíčky pro každou podporovanou architekturu. Balíček
+`uflinux-release` nakonfiguruje úložiště a nainstaluje jeho podpisový klíč
+`uflinux3.ec384.pub`.
+
+## Používání podporované kombinace
+
+UFLinux připíná jednu spoušť Alpine. **Do systému nemíchejte okrajové balíčky nebo jinou
+uvolňovací větev Alpine** — desktopový stack je vytvořen a testován proti jedné větvi a
+smíšené tahy v knihovnách, se kterými nebyl ověřen. Přechod na novější pobočku Alpine znamená
+výslovně otestované vydání UFLinux pro tuto pobočku, nikoli ruční úpravu
+`/etc/apk/repositories`.
+
+Po upgradu zkontrolujte soubory `.apk-new`, pokud jste upravili výchozí nastavení systému.
+UFLinux zachovává místní úpravy během upgradů a `.apk-new` uchovává zabalenou verzi souboru,
+který jste změnili.
+
+## Umístění konfigurace
+
+| Umístění | Obsah |
+| --- | --- |
+| `/etc/xdg` | Výchozí nastavení zabalené plochy |
+| `~/.config/labwc/` | Osobní přepisy kompozitoru |
+| `~/.config/uflinux/` | UFLinux Nastavení, hlavní panel a předvolby nabídky Start |
+| `/etc/tlp.d/` | Výkonový profil drop-ins |
+| `/etc/uflinux/power.json` | Fyzická zásada power-button (root-owned) |
+
+Pokud není přítomen žádný uživatelský soubor, prostředí desktopu používá své zabalené výchozí
+hodnoty, takže osobní konfigurace nahrazuje rozvržení zabaleného panelu místo jeho rozšíření.
+Připnuté oblíbené položky na hlavním panelu živě v `$XDG_CONFIG_HOME/uflinux/taskbar.json`.
+
+## Návrat ke starší verzi balíčku
+
+Před výběrem zkontrolujte, co je k dispozici:
+
+```sh
+doas apk policy uflinux-settings
+```
+
+Poté explicitně nainstalujte odpovídající starší verzi, včetně jejích závislostí. Pro větší
+vrácení použijte neměnný snímek podepsaného úložiště publikovaný s tímto vydáním UFLinux.
+
+Nainstalované kořeny XFS mají **žádné automatické snímky souborového systému**, takže
+zamýšleným nástrojem je vrácení balíčku – nikoli obnovení snímku.
+
+## Podepisování
+
+UFLinux podepisuje balíčky pomocí klíče **EC P-256 nebo P-384** publikovaného pod stabilním
+názvem `uflinux.ec.pub`. apk v2 nemá žádný proud podpisu ECDSA, takže podpis putuje v proudu
+SHA-256 a název streamu `RSA256` popisuje výtah, nikoli algoritmus. Úložiště aplikací je
+podepsáno samostatným klíčem `uflinux3.ec384.pub`. Pokud si udržujete vlastní vidlici, viz
+[Údržba](./developer/maintenance.md#podpisové-klíče).
+
+<UpstreamSource path="docs/installing.md" />

@@ -1,0 +1,87 @@
+---
+title: "Grafika a licence"
+description: "Původ ikon, tapet a loga UFLinuxu a licence, které se na ně vztahují."
+source: docs/artwork.md
+---
+
+import UpstreamSource from '../../../../components/UpstreamSource.astro';
+
+Plocha obnoví motiv ikon a výchozí tapetu vybrané [původní konfigurace
+UFLinux](https://github.com/UFlinux-project/main): Papirus – jako **Papirus-Dark** v každém
+aktuálním výchozím nastavení – a *Tmavý břečťan* GNOME. Tato aktiva jsou umělecká díla
+third-party použitá v původní distribuci, nikoli umělecká díla vytvořená UFLinux. Pro stranu
+user-facing viz [Vzhled a témata](../desktop/appearance.md).
+
+## Původ jednotlivých prvků
+
+| Aktiva | Zdroj | Kontrola provenience |
+| --- | --- | --- |
+| Ikony Papirus-Dark | Alpine podepsal `papirus-icon-theme` | inventář resolved-package |
+| Motiv ukazatele | Adwaita tmavé schéma `simp1e-cursors`, sestavené z připojeného upstream zdroje | odevzdat hash archivu ve zdrojovém zámku |
+| `adw-gtk3-dark` | Alpine podepsal `adw-gtk3` | inventář resolved-package |
+| Šest tapet | GNOME 3.38.0 zdrojový archiv | URL a SHA-512 připnuté v zámku zdroje |
+| Logo listu | Zjednodušené SVG z webu UFLinux | přesné upstream bajty v zámku kresby |
+
+Archiv GNOME je také ověřen proti publikovanému souboru kontrolního součtu GNOME a tvůrce
+balíčků archiv uchovává s dalšími vstupy pro obnovu a ověřuje jej během extrakce. Při
+přihlášení se nenačte žádná tapeta.
+
+GTK3, GTK4, labwc, ReGreet a Mako vyberte **Papirus-Dark**; Adwaita zůstává k dispozici pro
+záložní ikony a osobní preference přepíší sbalené výchozí hodnoty. Ukazatel používá tmavé
+schéma Adwaita motivu `simp1e-cursors`, které se dodává jako vlastní balíček
+`simp1e-cursors-adw-dark` v závislosti na základním balíčku `simp1e-cursors`, takže výběr
+varianty natáhne schéma, které rozšiřuje. Sestavuje se pouze základní motiv a tato varianta.
+Recept vychází ze zjednodušené verze balíčku Alpine `testing/simp1e-cursors`. Balíček
+chybí v repozitářích main a community pro připnuté vydání a dalších 49 podbalíčků
+s alternativními schématy by zbytečně zabíralo místo. GTK a GSettings vybírají motiv ze zabaleného drop-ins, ReGreet z jeho
+možnosti `cursor_theme_name` a labwc – který nemá možnost kurzoru v `rc.xml` – z
+`XCURSOR_THEME` v `/etc/xdg/labwc/environment`.
+
+Zjednodušené logo listu je zkopírováno beze změny z [Web
+UFLinux](https://uflinux.org/assets/logo.svg) od 17. listopadu 2026. Zobrazuje se na tlačítku
+Start na hlavním panelu a ve své přirozené velikosti se zobrazuje jako záložní verze
+[spouštěcí animace](../desktop/bootsplash.md) na počítačích bez loga firmwaru; pouze pole
+logotypu je vyříznuto z úvodního úvodního bodu bootloaderu pro vodoznak, bez převzorkování.
+Nastavení používá ikonu ozubeného kola `preferences-system` motivu ikony namísto značkového
+uměleckého díla, takže jeho ikona odpovídá motivu uživatele.
+
+## Tapety
+
+Šest originálních tapet GNOME 3.38 je nainstalováno bez obrazových úprav v
+`/usr/share/backgrounds/uflinux/`: Dark Ivy, Cold Warm, Endless Shapes, Road a dva obrazy
+Symbolics. Tato podmnožina má explicitní upstream atribuci a vyhovuje limitu obrazů
+16-megapixel aplikace Nastavení. Dark Ivy je výchozí nastavení pro přihlášení a **Obnovit
+výchozí tapetu** jej znovu vybere. Není potřeba žádný démon pro pracovní plochu nebo nastavení
+GNOME.
+
+## Licence
+
+- Skripty UFLinux, Nastavení a konfigurace: **GPL-3.0-only**, odpovídající licenci úložiště.
+- Zjednodušené logo listu: webová stránka SVG nese **žádné upozornění na licenci**; jeho zdroj
+  je zaznamenán v oznámení o uměleckém díle, nikoli přeformulován jako licence.
+- Dark Ivy od Garretta LeSage; Obrazy Nekonečné tvary a symbolika od Jakuba Steinera — **CC
+  BY-SA 3.0**.
+- Cold Warm od neviditelné síly a Road od Joshuy Welche — **CC0**.
+- Papirus dodává Alpine a má vlastní licenci.
+- Dodávané soubory a distribuované balíčky si zachovávají své upstream licence a přiřazení.
+
+Přesné upozornění na uvedení zdroje a licenci GNOME, text GPL a upozornění na umělecká díla
+jsou nainstalovány v `/usr/share/licenses/uflinux-defaults/`.
+
+## Soupis SPDX
+
+Obrazy dodávají inventář SPDX 2.3, který se ověřuje podle oficiálního schématu JSON. Zahrnuje balíčky APK obsažené přímo v obrazu ISO, včetně těch, které lze nainstalovat,
+ale při spuštění živé relace se automaticky neinstalují. Seznamy balíčků pro sestavení a ověření prostředí také obsahují nástroje pro
+sestavení nebo testování a jsou označeny podle fáze.
+
+Původní licenční poznámky APK jsou zachovány v `licenseComments`. Pole `licenseDeclared` a
+`licenseConcluded` používají `NOASSERTION`, protože anotace Alpine mohou obsahovat hodnoty
+mimo SPDX nebo vynechávat logické operátory. Soupis jejich význam nedoplňuje odhadem.
+
+## Co kontrolují testy
+
+Testy balíčků a pracovního prostředí ověřují vyhledávání ikon Papirus-Dark i ikon UFLinuxu,
+vykreslování SVG, rozměry dodávaných obrazů, omezení rozměrů náhledů, konfiguraci nabídky
+Start a vykreslování tapety běžícím pracovním prostředím.
+
+<UpstreamSource path="docs/artwork.md" />

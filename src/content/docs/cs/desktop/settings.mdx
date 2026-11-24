@@ -1,0 +1,220 @@
+---
+title: "Nastavení UFLinuxu"
+description: "Panely aplikace Nastavení v GTK4, jejich možnosti, příkazová řádka a související služby."
+source: docs/settings.md
+---
+
+import UpstreamSource from '../../../../components/UpstreamSource.astro';
+
+UFLinux Settings je aplikace GTK4 pokrývající systémové ovládací prvky, které potřebuje relace
+plochy. Je napsán v Rustu s prostým GTK4 a application-local CSS, používá vaše téma GTK a
+závisí **ne** na libadwaita, GNOME Settings nebo GNOME nastavovacím démonu.
+
+`Super` + `I` otevírá rozhraní ten-page: navigační boční panel zůstává viditelný a záhlaví
+nese pole pro vyhledávání nastavení vedle minimalizace, maximalizace a zavření. Stránky jsou
+vytvářeny na vyžádání a zahazovány, když je opustíte, takže UI zůstává malý; náhledy obrazů
+jsou ohraničené a libovolné vzdálené tapety se nikdy nestahují.
+
+Stránky jsou **Síť**, **Displeje**, **Zvuk**, **Moc**, **Výchozí aplikace**, **Datum a čas**,
+**Vzhled**, **Snímání obrazovky**, **Vzdálená plocha** a **O**. Stránka Network je rozdělena
+na karty **Wi-Fi**, **Ethernet**, **Bluetooth** a **VPN** a Sound rozděluje zařízení na karty
+**Výstup** a **Vstup**. Karty sdílejí jeden pevný rámec, takže jejich přepnutím se nikdy
+nezmění velikost okna ani plovoucí nabídky a karta se vytvoří, až když se její hardware objeví
+na snímku.
+
+## Panely a příkazová řádka
+
+Každý panel je kompaktní plovoucí verzí své stránky, která se zobrazuje nad tlačítkem na
+hlavním panelu. `Escape`, vnější kliknutí nebo opakované kliknutí na hlavním panelu jej zruší.
+Hlavní panel nakreslí plovoucí nabídku na monitor, který ji vlastní.
+
+```sh
+uflinux-settings --page network        # full window on one page
+uflinux-settings --panel network --output DP-1
+uflinux-settings --panel sound --output DP-1
+uflinux-settings --panel power --output DP-1
+uflinux-settingsctl status
+uflinux-settingsctl volume -5
+uflinux-settingsctl brightness 5
+uflinux-settingsctl mute
+uflinux-settingsctl power-profile balanced
+```
+
+`--quick-settings` je alias pro síťový panel. GUI znovu použije svůj proces a ukončí se po
+zavření posledního okna – žádné procesy shellu nevyžadují dotaz na stav.
+
+Ovládací prvky pro hardware, který nemáte, jsou skryty, nikoli zobrazeny jako nedostupné.
+Pomocí šipky vedle posuvníku hlasitosti vstupu nebo výstupu vyberte, které zvukové zařízení
+ovládá. Každý panel odkazuje na celou stránku pro pokročilé možnosti.
+
+## Síť
+
+Síť je **ConnMan** s **iwd**. V sadě závislostí na ploše není žádný `wpa_supplicant` a žádný
+NetworkManager a žádný samostatný správce resolveru – nepovolujte `networking`, `dhcpcd` nebo
+jiný resolver vedle ConnMan.
+
+Panel nabízí skenování, stav radio-block, osobní a skryté sítě, uložená připojení, opětovné
+připojení/odpojení/zapomenutí, adresování, DNS a vyhledávací domény a ovládání proxy. Další
+statické trasy používají protokol 242 s databází root-protected per-connection; aktualizace
+jsou serializovány, při selhání se vrací zpět a odstraňují pouze přesné trasy vlastněné
+UFLinux. Směrovací tabulky se nikdy nevyprázdní. Aktuální trasy IPv4 a IPv6 jsou viditelné v
+UI.
+
+**Enterprise Wi-Fi** podporuje EAP-TLS, PEAP/MSCHAPv2 a TTLS/PAP. Dodejte platný CA,
+očekávanou doménu serveru a odpovídající identitu/heslo nebo klientský certifikát a klíč.
+Ověřování probíhá v chráněném profilu iwd, zatímco ConnMan zůstává řadičem připojení. Profily
+a importované certifikáty jsou machine-wide a root-readable; tajemství jsou držena mimo
+sdílené snímky a předvolby. Zapomenutím připojení se odstraní soubory jeho certifikátů.
+UFLinux opravuje balíček ConnMan 2.0-r4 od Alpine, takže jsou přijímána podniková připojení
+iwd-managed; samostatný balíček `connman-vpn` vytváří pouze backend WireGuard a spouští jej
+jako `connman-vpnd`.
+
+Karta **Bluetooth** se zobrazí, když je k dispozici adaptér a hovoří s BlueZ přímo přes
+systémovou sběrnici: napájení adaptéru, skenování, párování, zrušení párování, důvěřování a
+připojování zařízení se signálem a baterií tam, kde je zařízení hlásí. Párování využívá
+výchozí tok BlueZ bez agenta, takže zařízení, která vyžadují výměnu I/O funkcí, se stále
+nemusí párovat. Karta **VPN** spravuje tunely `connman-vpnd` WireGuard: import konfigurace
+klienta vytvoří tunel prostřednictvím zadaného požadavku `vpn-import` a každý uvedený tunel
+lze připojit, odpojit nebo odstranit. Soukromé klíče zůstávají v démonu a nikdy se neodrážejí
+ve snímcích nebo předvolbách; karta se zobrazí v rychlém nastavení pouze v případě, že je
+nakonfigurován alespoň jeden tunel.
+
+Hotspoty, tethering a virtuální rozhraní zůstávají mimo tento UI.
+
+### Synchronizace času
+
+Klient built-in SNTP ConnMan je synchronizátor hodin **pouze** – žádný `ntpd`, `chronyd` nebo
+`openntpd`. Jeho trvalá politika začíná jako automatická synchronizace s manuálním časovým
+pásmem. Mutace hodin je omezena na root, takže běžný uživatel nemůže obejít polkit přímým
+přepínáním synchronizace. ConnMan nastavuje hodiny pomocí `adjtimex()`, otáčení malých posunů
+a krokování velkých.
+
+Nastavení zobrazuje časové servery, na které by se ConnMan skutečně dotazovalo – ty, které
+nejprve oznámilo aktivní připojení, poté nakonfigurovaný záložní seznam – a nabízí manuální
+čas pouze při vypnuté automatické synchronizaci. RTC používá UTC. Stav, který vidíte, pochází
+ze skutečného stavu jádra, nikoli z úspěšného vyhledávání DNS.
+
+## Zvuk
+
+Ovládací prvky zvuku hovoří z klientského protokolu PulseAudio s **pipewire-pulse**. PipeWire
+a WirePlumber jsou audio zásobník; neexistuje žádný PulseAudio server. Zařízení, profily,
+porty, výchozí hodnoty, hlasitost, vyvážení, ztlumení a streamy per-application sdílejí stav
+mezi plovoucí nabídkou panelu a celou stránkou a předplatná se znovu připojí po restartu
+serveru. Vstupní a výstupní zařízení jsou na samostatných kartách; šipka vedle posuvníku
+hlasitosti vybere zařízení.
+
+## Napájení
+
+Tři profily — **Spořič energie**, **Vyvážený** a **Výkon** — mapují na příkazy profilu TLP.
+Alpine 3.24 dodává TLP 1.10.1; Výchozí nastavení je vyvážené. Výběr přetrvává po restartování
+a změnách nabíječky prostřednictvím `/etc/tlp.d/90-uflinux-profile.conf` a UI hlásí profil
+pouze tehdy, když to potvrdí záznam běhu TLP. Nepodporované hardwarové laditelné možnosti jsou
+ponechány na TLP samotném. Přepisy administrátora v `/etc/tlp.conf` mají přednost před drop-in
+a mohou přepsat uložený výběr spouštění; UI pak zobrazí profil, který je skutečně platný.
+
+Neexistuje žádný `power-profiles-daemon` a žádný skript rezidentních zásad. Spouštění OpenRC
+TLP a háčky udev aplikují vybranou politiku.
+
+### Fyzické tlačítko napájení
+
+Konfigurovatelné **pouze** v Nastavení → Napájení: vyberte **Vypněte**, **Pozastavit** nebo
+**Nedělejte nic** nezávisle pro AC a baterii. Změny vyžadují autorizaci správce a pozastavení
+je odmítnuto, pokud není k dispozici. Výchozí akce short-press je Vypnout. Dlouhé stisky
+Firmware-controlled zde nelze změnit.
+
+Mapování je řízeno `uflinux-acpid`, které vyvolává `/bin/busybox acpid` a přijímá pouze
+tiskové události power-key s ohraničeným, odskočeným kořenovým háčkem. Hák přečte zásady
+root-owned v `/etc/uflinux/power.json`, zkontroluje vypnutí a inhibitory spánku a požádá
+elogind, aby jednal. Elogind `HandlePowerKey=ignore` drop-in zabraňuje dvojité manipulaci;
+zásada víka zachovává výchozí hodnoty elogind. Instalace jiného démona `acpid` nebo
+power-profile je v konfliktu s tímto balíčkem.
+
+Běžné akce pozastavení, restartování a vypnutí v nabídce Start tuto zásadu nemění.
+
+## Obrazovky
+
+Nastavení zobrazení používá protokol output-management sazbu pro inzerované rozlišení a režimy
+obnovy, zlomkové měřítko, transformace, umístění a povolení. labwc testuje konfiguraci před
+jejím použitím: služba relace vyžaduje potvrzení do 15 sekund a obnoví předchozí rozložení při
+vypršení časového limitu, ztrátě volajícího nebo ztrátě výstupu. Deaktivace konečného
+zobrazení je odmítnuta.
+
+Potvrzené rozvržení jsou uloženy podle identity displeje a obnoveny při přihlášení a na
+hotplug. Chybějící výstupy, duplicitní identity, nedostupné režimy a neplatná uložená
+rozvržení se obnoví na použitelný displej preferred-mode.
+
+Dvě poctivá omezení: Ovládací prvky VRR potřebují podporu protokolu *a* kompatibilní hardware
+a HDR je globální požadavek labwc „použij HDR tam, kde je podporován“, spíše než zpráva o
+aktivaci per-monitor. Zrcadlení není simulováno překrývajícími se displeji.
+
+Hodnoty podsvícení a aktualizace zařízení hotplug prostřednictvím filtrovaných událostí eudev.
+Jas DDC/CI používá ohraničené asynchronní operace `ddcutil` proti připojené identitě DRM/EDID;
+nepodporované monitory vykazují nedostupný stav a změny hardware-button vyžadují opětovné
+skenování, protože protokol neposkytuje žádnou událost push.
+
+## Snímání obrazovky
+
+Konfiguruje `uflinux-screencapture`, nástroj za `Print Screen`: formát a složku snímku
+obrazovky, kopírování do schránky, flash, zachycení kurzoru a zpoždění, plus cíl nahrávání,
+předvolbu kvality, zdroj zvuku a snímkovou frekvenci. Zbývající možnosti nahrávání jsou
+umístěny za rozšířeným expandérem, který zrcadlí vlastní frontend backendu; zda je tento
+expandér otevřený, je samo o sobě prioritou. Stránka hlásí, zda byl detekován backend
+`gpu-screen-recorder`, a může re-run tento testovat.
+
+`Print Screen` otevře překrytí ztlumeného snímání, které nabízí režimy **Obrazovka**, **okno**
+a **Oblast**. Nahrávání podporuje Screen a Area. `Shift` + `Print Screen` nebo `Ctrl` + `Print
+Screen` spustí nahrávání obrazovky přímo, když je zde vybraný režim Obrazovka. Během nahrávání
+se na hlavním panelu zobrazuje červený časovač: kliknutím na něj zastavíte nebo right-click
+pozastavíte a obnovíte.
+
+Hardwarové kódování vyžaduje ovladač VA-API. Meta desktop obsahuje ovladač Mesa gallium plus
+oba ovladače Intel VA-API, takže nahrávání funguje hned po vybalení na AMD a Intel GPU. Na
+deskách, jejichž kodérem je zařízení Qualcomm Iris/Venus V4L2 — například Arrow Dragon Q6A —
+se vyrovnávací paměť pro zachycení před dosažením kodéru zarovná na 128 × 32, což je to, co
+toto zařízení vyžaduje a co udržuje okraje záznamu čisté při jakémkoli rozlišení.
+
+## Vzdálená plocha
+
+Stránka Vzdálená plocha spravuje `uflinux-rds`, server IronRDP-based, který dodává
+**zakázáno**. Zapíná a vypíná službu, nastavuje nativní port RDP a port web-client, omezuje
+přihlášení na seznam uživatelů nebo skupin a omezuje souběžné relace. Každý připojený uživatel
+získá soukromou bezhlavou relaci `labwc` uvnitř `cage`, takže se stroj chová jako terminálový
+server, nikoli sdílení jedné plochy. Sekce kodeků vybírá H.264 (`auto`, `force` nebo `off`),
+RemoteFX a frame-rate čepici; `auto` preferuje kodér out-of-process `ffmpeg -c:v h264_vaapi`,
+který potřebuje volitelný balíček `uflinux-rds-vaapi`, a vrací se zpět k softwaru OpenH264 a
+poté RemoteFX. Webového klienta na portu 3390 lze úplně deaktivovat, přepnout z HTTPS na HTTP
+a dát mu vlastní certifikát namísto vygenerovaného self-signed.
+
+Změny jsou zapsány do `/etc/uflinux/rds.json` a odeslány běžícímu brokerovi, takže jejich
+použití nezastaví živé relace. Povolení služby, její spuštění a odpojení relace proveďte přes
+`org.uflinux.rds.configure` a tedy přes polkit. Úplné podrobnosti jsou na stránce [Vzdálená
+plocha](./remote-desktop.md).
+
+## Výchozí aplikace a informace o systému
+
+Výchozí aplikace používají přidružení GIO/XDG a zachovávají nesouvisející mapování. **O**
+poskytuje kopírovatelné systémové informace a toleruje nedostupná hardwarová data.
+
+## Vnitřní uspořádání aplikace
+
+| proces | Role |
+| --- | --- |
+| `uflinux-settingsd` | Služba bezhlavé relace. Spící pracovník Waylandu zpracovává výstupní protokoly; libpulse se integruje asynchronně s GLib. Zveřejňuje sdílený snímek prostředí plochy a čtení panelů. |
+| `uflinux-settings` | Model GTK4 UI. Jediný proces, který registruje autentizačního agenta polkit. |
+| `uflinux-settings-system` | Kořenový pomocník D-Bus, autorizovaný na typizovanou operaci s polkitem. Ukončí se po 45 sekundách nečinnosti. |
+
+Rozhraní D-Bus relace je `org.uflinux.Settings1` na `/org/uflinux/Settings`, s `GetState`,
+zadanými požadavky `Execute` a předplatnými `Changed`. Neznámá pole a požadavky větší než 256
+kB jsou odmítnuty — toto je rozhraní projektu, nikoli obecné command-forwarding API.
+`uflinux-settingsctl request` čte svůj požadavek ze standardního vstupu; **nikdy nepředávejte
+přihlašovací údaje jako argumenty příkazu**.
+
+Systémový pomocník přijímá pouze hodiny, časová pásma a synchronizaci času, chráněné profily
+Wi-Fi, přesné dodatečné trasy a jas identity-checked DDC. Žádné příkazy shellu, žádné
+libovolné cesty. Správci kol se ověřují vlastním heslem; root zůstane uzamčen. Autorizaci bez
+aktivní lokální relace lze odepřít — v takovém případě použijte `doas` na konzole.
+
+Uživatelské předvolby žijí pod `~/.config/uflinux` plus vaše osobní soubory labwc, GTK a XDG.
+Upgrady balíčků je zachovají.
+
+<UpstreamSource path="docs/settings.md" />

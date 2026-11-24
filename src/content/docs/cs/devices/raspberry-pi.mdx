@@ -1,0 +1,62 @@
+---
+title: "Raspberry Pi 3–5"
+description: "Jak spustit obraz UFLinuxu na Raspberry Pi 3, 4 a 5."
+status: Supported
+source: docs/device-images.md
+---
+
+import UpstreamSource from '../../../../components/UpstreamSource.astro';
+
+Obraz `rpi` je nejkonvenčnější z obrazů zařízení UFLinux: systém aarch64 na jádře `linux-rpi`
+od Alpine, spouštěný vlastním firmwarem VideoCore desky.
+
+## Parametry obrazu
+
+| | |
+| --- | --- |
+| ID desky | `rpi` |
+| Modelky | Raspberry Pi 3, 4 a 5 |
+| Architektura | aarch64 |
+| Jádro | Alpine `linux-rpi` |
+| Spouštění | Firmware VideoCore s `config.txt` |
+| Kořenový souborový systém | f2fs, štítek `UFLINUX_ROOT` |
+| Velikost | 6144 MiB nekomprimováno |
+| Stav | Podporováno |
+
+"Podporováno" zde znamená, že cíl je součástí běžného sestavení a není označen jako
+experimentální v matrici vydání. Znamená to, že **ne** znamená, že obraz byl spuštěn na
+fyzickém Pi – viz [Obrazy zařízení](./index.md#jak-číst-stav-zařízení).
+
+## Spouštěcí soubory
+
+ESP nese spouštěcí schéma Raspberry Pi spíše než zavaděč EFI: `config.txt`, `cmdline.txt`,
+`usercfg.txt`, firmware VideoCore a překryvy device-tree, vše rozbalené z balíčků bootloaderu.
+Jádro je na `boot/vmlinuz` a initramfs na `boot/initramfs`.
+
+## Zápis obrazu
+
+```sh
+zstd -d < uflinux-0.1.0-rpi-aarch64.img.zst | sudo dd of=/dev/sdX bs=8M oflag=direct status=progress
+sync
+```
+
+Funguje jakákoli karta větší než 6144 MiB; kořenový oddíl se zvětší, aby zaplnil zbytek při
+prvním spuštění. Přihlaste se jako **user / user**, změňte `passwd`, pokud chcete, a použijte
+`sudo` nebo `doas` s tímto heslem pro příkazy pro správu.
+
+Úplné podrobnosti – rozvržení, první přihlášení, služba změny velikosti a aktualizace – jsou
+na [Obrazy zařízení](./index.md).
+
+## Poznámky pro uživatele Raspberry Pi
+
+- Obraz vyžaduje firmware aarch64.
+- f2fs se záměrně používá pro vyrovnávání opotřebení karty SD. Kořen je pěstován offline v
+  initramfs, než je připojen, takže plná velikost je k dispozici od prvního spuštění — viz
+  [První spuštění](./index.md#co-je-při-startu-jinak).
+- Plocha očekává místní zobrazení; sériová konzole je nakonfigurována na 115200 8n1 na výchozí
+  desce UART.
+- Fyzické chování GPU, HDMI, zvuku a Wi-Fi na Pi nebylo certifikováno. Tarbally Alpine
+  board-specific Raspberry Pi zůstávají možností better-tested, pokud potřebujete zaručenou
+  hardwarovou podporu.
+
+<UpstreamSource path="docs/device-images.md" />

@@ -1,0 +1,90 @@
+---
+title: "Vzhled a motivy"
+description: "Výchozí ikony, kurzor, motivy GTK, dekorace oken a tapety UFLinuxu a postup jejich změny."
+source: docs/artwork.md
+---
+
+import UpstreamSource from '../../../../components/UpstreamSource.astro';
+
+UFLinux dodává temnou plochu sestavenou z upstream témat spíše než na míru. Motiv ikony a
+výchozí tapeta se řídí těmi, které vybraly [původní konfigurace
+UFLinux](https://github.com/UFlinux-project/main): Papirus a GNOME *Tmavý břečťan*.
+
+| Aspekt | Výchozí | Zdroj |
+| --- | --- | --- |
+| ikony | Papirus-Dark | Alpine podepsal `papirus-icon-theme` |
+| Ukazatel | `simp1e-cursors-adw-dark` | `simp1e-cursors`, postavený z připojeného upstream zdroje |
+| GTK3 a GTK4 | `adw-gtk3-dark` | Alpine podepsal `adw-gtk3` |
+| Okenní dekorace | `labAdwaita-dark` | labwc |
+| Tapeta | Tmavý břečťan | GNOME 3.38 umělecké dílo |
+| Záložní ikony | Adwaita | alpský |
+
+GTK3, GTK4, labwc, ReGreet a Mako všechny vyberou Papirus-Dark; prostředí plochy přebírá ikony
+aplikací z nakonfigurovaného motivu ikon GTK.
+
+Ukazatel používá tmavé schéma Adwaita motivu `simp1e-cursors`, vytvořené z připojeného zdroje
+v `aports/simp1e-cursors`. Generuje se pouze základní téma a tato varianta, takže recept je
+oříznutou kopií Alpine `testing/simp1e-cursors`: balíček není v hlavním a komunitním
+repozitáři připnutého vydání a 49 dílčích balíčků schématu Alpine by bylo plýtváním místem.
+Varianta se dodává jako vlastní balíček `simp1e-cursors-adw-dark`, který závisí na základním
+balíčku `simp1e-cursors`, takže výběr varianty také vytáhne schéma, které rozšiřuje. GTK a
+GSettings to vyberou z drop-ins níže, ReGreet z možnosti `cursor_theme_name` a labwc – který
+nemá možnost kurzoru v `rc.xml` – z `XCURSOR_THEME` v `/etc/xdg/labwc/environment`.
+
+Není nastaveno žádné globální přepsání `GTK_THEME`, takže přednost mohou mít osobní témata a
+preference usnadnění.
+
+## Změna motivu
+
+Použijte **Nastavení → Vzhled**. Výběr tapety začíná v přibalené kolekci a **Obnovit výchozí
+tapetu** opět vybere Dark Ivy.
+
+Osobní preference vždy vítězí nad výchozím nastavením balíčku:
+
+- GTK3 a GTK4 čtou soubory XDG `settings.ini` a odpovídající výchozí hodnoty schématu
+  GSettings. GTK3 na Wayland čte po instalaci schémata plochy, která mají přednost před
+  `settings.ini`; přepsání sbaleného schématu je to, co udržuje motiv, ikony, kurzor a písmo
+  konzistentní a vybírá tmavé barevné schéma. Vaše vlastní předvolby GSettings pro GTK3 a vaše
+  osobní `settings.ini` pro GTK4 mají stále přednost.
+- Dekorace a menu labwc pocházejí z `labAdwaita-dark`. Pomocník relace přečte pojmenované
+  barvy záhlaví vybraného motivu GTK3 jednou při spuštění a použije je na labwc, tedy **změny
+  motivu se projeví při příštím přihlášení**.
+
+Chcete-li převzít ruční ovládání dekorací labwc, upravte první řádek
+`~/.config/labwc/themerc-override` (nebo svůj vlastní `rc.xml`) — osobní soubor zůstane pod
+kontrolou. Motivy bez jednoduchých pojmenovaných barev záhlaví a aplikace GTK4 s vlastním
+přepsáním motivu mohou stále vypadat jinak.
+
+## Tapety
+
+Šest původních tapet GNOME 3.38 je nainstalováno bez úprav v
+`/usr/share/backgrounds/uflinux/`: Dark Ivy, Cold Warm, Endless Shapes, Road a dva obrazy
+Symbolics. Dark Ivy je výchozí nastavení pro přihlášení. Není zapojena žádná plocha GNOME nebo
+démon nastavení a při přihlášení se nenačte žádná tapeta.
+
+Nastavení tapety přijímají místní soubory až do velikosti 32 MiB a 16 megapixelů, s
+předvolbami přizpůsobení, barvy a per-output. Rezidentní desktopový shell je sám kreslí na
+povrchy pozadí – neexistuje žádný samostatný tapetový démon.
+
+## Logo s listem
+
+List je zjednodušené logo zkopírované beze změny z [Web
+UFLinux](https://uflinux.org/assets/logo.svg) dne 17. listopadu 2026. Zobrazí se na hlavním
+panelu tlačítka Start a jako záložní řešení [spouštěcí animace](./bootsplash.md). Importovaný
+SVG je porovnán s přesnými upstream bajty zaznamenanými v zámku kresby sestavení. Nastavení
+používá ikonu ozubeného kola `preferences-system` motivu ikony namísto značkového uměleckého
+díla, takže jeho ikona odpovídá motivu ikony.
+
+## Licence
+
+Vlastní kód a balíčky UFLinux jsou `GPL-3.0-only`. Přibalené umělecké dílo si zachovává své
+vlastní podmínky: webová stránka SVG neobsahuje žádné licenční upozornění a jeho zdroj je
+uveden v upozornění na umělecké dílo; Dark Ivy je od Garretta LeSage, Endless Shapes and the
+Symbolics obrazy od Jakuba Steinera, pod CC BY-SA 3.0; Cold Warm je od invisiblepower a Road
+od Joshuy Welche, pod CC0.
+
+Úplné uvedení zdroje, text GPL a upozornění na umělecká díla jsou nainstalovány pod
+`/usr/share/licenses/uflinux-defaults/`. Obrazy také dodávají inventář SPDX toho, co je
+fyzicky přibaleno – viz [Umělecká díla a licence](../developer/artwork-and-licenses.md).
+
+<UpstreamSource path="docs/artwork.md" />

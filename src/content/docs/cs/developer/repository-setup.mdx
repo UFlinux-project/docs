@@ -1,0 +1,88 @@
+---
+title: "Nastavení repozitáře"
+description: "Jak nastavit fork UFLinuxu nebo hlavní repozitář pro GitHub Actions, GitHub Pages a podepisování."
+source: docs/github-setup.md
+---
+
+import UpstreamSource from '../../../../components/UpstreamSource.astro';
+
+Tato stránka je konkrétním kontrolním seznamem pro upstream úložiště. Vidlice se řídí stejnými
+kroky se svými vlastními názvy.
+
+## Repozitář
+
+Push to **veřejné** GitHub repository s `main` jako výchozí větev, povolte Actions a zvolte
+**GitHub Actions** jako zdroj stránek.
+
+Nakonfigurujte prostředí `github-pages` tak, aby umožňovalo nasazení ze značek verzí, jako je
+`v*` – omezení default-branch jinak odmítají sestavení značek.
+
+## Adresa repozitáře APK
+
+Distribuční úložiště používá vlastní doménu Pages:
+
+```text
+https://repo.uflinux.org/apk/v3.24/uflinux
+```
+
+Nasměrujte záznam `repo` DNS (`CNAME` na web `github.io`) na stránky GitHub a nastavte stejnou
+vlastní doménu v **Nastavení → Stránky**. Forky a další úložiště spadají zpět na
+`https://OWNER.github.io/REPO/apk/v3.24/uflinux` odvozené z `GITHUB_REPOSITORY` (repozitáře
+account-site jsou zpracovány automaticky) a proměnná `APK_REPOSITORY_URL` Actions přepíše
+kteroukoli výchozí hodnotu.
+
+## Tajné údaje pro podepisování
+
+Připravte si trvalý pár klíčů EC P-256 nebo P-384 lokálně, mimo pracovní prostor sestavení, v
+`$HOME/.config/uflinux3-signing/` — `$HOME/.config/uflinux` je adresář vlastních preferencí
+pracovní plochy. Postupujte podle příkazů v [CI a publikování](./ci-and-publishing.md#klíče) a
+ponechte adresář a soukromý klíč owner-restricted a mimo Git.
+
+V **Nastavení → Tajemství a proměnné → Akce** přidejte:
+
+| Tajemství | Obsah |
+| --- | --- |
+| `APK_SIGNING_PRIVATE_KEY` | Dokončete obsah PEM `uflinux.ec` |
+| `APK_SIGNING_PUBLIC_KEY` | Dokončete obsah PEM `uflinux.ec.pub` |
+
+Oba musí držet výše uvedenou klávesu EC; dříve nahraný pár RSA je sestavením odmítnut spíše
+než tiše přijat. apk v2 nemá typ podpisu ECDSA, takže klíč je přenášen v proudu podpisů
+SHA-256 – viz [Údržba](./maintenance.md#podpisové-klíče).
+
+Samostatné úložiště aplikací, které publikuje `uflinux-files`, je podepsáno vlastním klíčem,
+`uflinux3.ec384.pub`, připojeným v sekci `apps` zámku zdroje.
+
+Před publikováním vydání zazálohujte soukromý klíč. Nezavazujte jej ani nevkládejte do
+problémů, protokolů nebo chatu.
+
+## Průběh každého běhu
+
+- Posouvá tajemství vydání `main` a ručního odeslání sestavení vývojových obrazů **bez**.
+- Značka verze vytváří sadu balíčků vydání a zpřístupňuje klíč pouze důvěryhodným úlohám
+  podepisování, sestavování a publikování.
+- Publikace je vázána na všechny čtyři kontroly architektury plus nativní záznamy o integraci
+  a reprodukovatelnosti.
+- Pages uchovává tři generace vydání a před nasazením kontroluje velikost celého balíčku.
+
+## První spuštění
+
+```sh
+python3 scripts/check.py          # run before pushing
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+Nejprve spusťte pracovní postup ručně, abyste zkontrolovali vývojové artefakty, a poté
+označte.
+
+## Převzetí forku
+
+Před veřejným vydáním je třeba nahradit dva zástupné symboly:
+
+- rezervovaná identita baliče `noreply@example.invalid`, což je syntakticky platná výchozí
+  hodnota a nikoli monitorovaná adresa podpory;
+- projekt balíčku URL, který by měl ukazovat na vaše skutečné úložiště.
+
+Podívejte se na [Údržba](./maintenance.md), co se ještě změní, když převezmete vidlici.
+
+<UpstreamSource path="docs/github-setup.md" />
