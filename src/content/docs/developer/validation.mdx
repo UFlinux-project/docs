@@ -21,7 +21,7 @@ hardware.
 | Bluetooth and WireGuard VPN | Verified against BlueZ and ConnMan VPN fixtures, not physical hardware |
 | Byte-identical whole-ISO rebuild | Not established |
 
-Publication requires green build reports for all six architectures and green boot reports
+Publication requires green build reports for all four architectures and green boot reports
 for both x86_64 firmware modes. A configured test is not evidence of a successful run — check
 the workflow results and attached build records.
 
@@ -90,7 +90,7 @@ facilities fail the gate rather than silently claiming coverage.
 The live root unpacks the desktop and the full Papirus icon theme into tmpfs, whose default
 capacity is 75% of RAM. The current Papirus, artwork and theme package set uses about 993 MiB
 in the live root. A 2 GiB live guest exhausted its root filesystem during boot, so live tests
-now allocate 4 GiB — 3 GiB for armv7's QEMU highmem restriction. The runner rejects boot-time
+allocate 4 GiB. The runner rejects boot-time
 APK database and kernel memory failures explicitly and logs byte and inode capacity.
 
 ## The unified desktop

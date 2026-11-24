@@ -6,7 +6,7 @@ source: docs/architectures.md
 
 import UpstreamSource from '../../../components/UpstreamSource.astro';
 
-UFLinux builds packages and ISO images for six Alpine architectures. The important caveat
+UFLinux builds packages and ISO images for four Alpine architectures. The important caveat
 is up front: **only the x86_64 ISO is boot-tested.** The other five are built and published,
 but no virtual machine is ever started with them.
 
@@ -14,18 +14,13 @@ but no virtual machine is ever started with them.
 
 | Alpine architecture | Package build | Boot tests |
 | --- | --- | --- |
-| x86 | native compatibility mode | none |
 | x86_64 | native (q35 machine) | **BIOS and UEFI** |
 | aarch64 | native ARM64 runner | none |
-| armv7 | ARM64 runner, qemu-arm | none |
 | ppc64le | qemu-ppc64le | none |
 | riscv64 | qemu-riscv64 | none |
 
-`armhf` is not among them. x86 uses the x86_64 kernel's 32-bit compatibility support, and
-armv7 is emulated on ARM64 runners because AArch32 support is optional in ARM64 kernels.
-
 The x86_64 boot test runs on every commit, pull request, tag and full-matrix run. A release
-requires green build reports for all six rows and green boot reports for both x86_64
+requires green build reports for all four architectures and green boot reports for both x86_64
 firmware modes — the gate asks only for the boot tests that actually run.
 
 ## Device image targets
@@ -33,14 +28,14 @@ firmware modes — the gate asks only for the boot tests that actually run.
 | Board id | Package build | Boot firmware | Status |
 | --- | --- | --- | --- |
 | `pc-f2fs` | native x86_64 runner | BIOS `syslinux` and UEFI `systemd-boot` | supported |
-| `pc-xfs` | native x86_64 and x86 runners | BIOS `syslinux` and UEFI `systemd-boot` | supported |
+| `pc-xfs` | native x86_64 runners | BIOS `syslinux` and UEFI `systemd-boot` | supported |
 | `rpi` | native ARM64 runner | VideoCore firmware with `config.txt` | supported |
 | `vm` | native x86_64 and ARM64 runners | UEFI with `systemd-boot` | supported |
 | `qcs6490` | native ARM64 runner | board UEFI plus `systemd-boot` | experimental |
 | `spacemit-k1` | qemu-riscv64 | U-Boot distro boot with `extlinux` | experimental |
 
 The two `pc-*` targets are not boards but machines: they write to an internal disk or a USB
-stick, boot on any x86 firmware, and are the only images carrying a BIOS and a UEFI boot chain
+stick, boot via BIOS or x86_64 UEFI, and are the only images carrying a BIOS and a UEFI boot chain
 on the same disk. Device images are supplementary: built on tags and attached to the release,
 but not part of the publication gate, and none has a configured boot test. See
 [Device images](../devices/index.md).

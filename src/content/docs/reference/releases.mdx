@@ -15,7 +15,7 @@ attestations to what it publishes.
 
 | Artifact | Naming | Notes |
 | --- | --- | --- |
-| Live ISO | `uflinux-VERSION-ARCH.iso` | Six architectures |
+| Live ISO | `uflinux-VERSION-ARCH.iso` | Four architectures |
 | Checksums | `SHA256SUMS` | Covers the ISOs |
 | Device images | `uflinux-VERSION-DEVICE-ARCH.img.zst` | Zstandard level 12 |
 | Device checksums | `…img.zst.sha256` | One sidecar per image |
@@ -56,7 +56,7 @@ alone cannot.
 
 ## Which artifact to trust most
 
-Publication requires green build reports for all six architectures and green boot reports
+Publication requires green build reports for all four architectures and green boot reports
 for **both x86_64 firmware modes**. That means:
 
 - **x86_64** is the only architecture whose ISO has actually been booted — in CI, on BIOS

@@ -72,9 +72,8 @@ Every architecture ships:
 - **gpu-screen-recorder** as the screenshot and screen-recording backend
 - **BlueZ** for Bluetooth and ConnMan's VPN daemon for WireGuard tunnels
 
-**UFLinux Files** (`uflinux-files`) comes from the apps repository, which indexes only
-`x86_64`, `aarch64`, `ppc64le` and `riscv64` — `x86` and `armv7` ship without a graphical
-file manager rather than with an unsatisfiable dependency. **Remote Desktop** (RDP) ships
+**UFLinux Files** (`uflinux-files`) comes from the apps repository on every supported
+architecture. **Remote Desktop** (RDP) ships
 in the image too, but **disabled by default**, so nothing listens on any port until you
 turn it on — see [Remote Desktop](./remote-desktop.md).
 

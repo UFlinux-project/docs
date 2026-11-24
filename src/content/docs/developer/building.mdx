@@ -22,9 +22,7 @@ Ubuntu runners:
 python3 scripts/preflight.py --arch ppc64le
 ```
 
-x86 uses the x86_64 kernel's 32-bit compatibility support. aarch64 and armv7 builds use
-ARM64 runners; armv7 stays emulated there, because AArch32 support is optional in ARM64
-kernels and the runner map treats only an identical host architecture as native.
+CI builds x86_64 and aarch64 on native runners and emulates ppc64le and riscv64.
 
 Run privileged builds on a machine you are willing to destroy. The build chroot exposes
 `proc` and selected device nodes but not host sysfs — it is a build environment, not a

@@ -1,6 +1,6 @@
 ---
 title: Počítače
-description: Předinstalované diskové obrazy UFLinuxu pro stroje x86 s bootováním BIOS i UEFI
+description: Předinstalované diskové obrazy UFLinuxu pro stroje x86_64 s bootováním BIOS i UEFI
   na jednom disku.
 source: docs/device-images.md
 ---
@@ -16,7 +16,7 @@ které nejsou desky, a jediné, které mají na jednom disku bootovací řetěze
 | | `pc-xfs` | `pc-f2fs` |
 | --- | --- | --- |
 | Pro | Počítače s pevným diskem nebo SSD | Počítače bootující z flash disku nebo SD karty |
-| Architektura | x86_64 a x86 | x86_64 |
+| Architektura | x86_64 | x86_64 |
 | Kernel | Alpine `linux-lts` | Alpine `linux-lts` |
 | Boot | BIOS `syslinux` + UEFI `systemd-boot` | BIOS `syslinux` + UEFI `systemd-boot` |
 | Kořenový souborový systém | XFS s labelem `UFLINUX_ROOT` | f2fs s lz4 kompresí clusterů |
@@ -30,14 +30,13 @@ a ani jeden není pokrytý automatickými boot testy — viz
 
 ## Jeden disk, dvě kategorie firmwaru
 
-Obraz pro počítač musí nabootovat s jakýmkoli firmwarem, který stroj zrovna má, proto ESP
+Obraz pro počítač musí nabootovat přes BIOS nebo x86_64 UEFI, proto ESP
 obsahuje dva nezávislé bootovací řetězce:
 
-- **UEFI** používá layout pro vyměnitelná média: `EFI/boot/bootx64.efi` (resp.
-  `bootia32.efi` u 32bitového obrazu), `loader/loader.conf` a
+- **UEFI** používá rozložení pro vyměnitelná média se soubory `EFI/boot/bootx64.efi`,
+  `loader/loader.conf` a
   `loader/entries/uflinux.conf`. Do startovacích proměnných firmwaru se nic nezapisuje,
-  takže nemusí existovat žádný NVRAM záznam a stejný disk nabootuje v jakémkoli stroji —
-  včetně takového, který záznam, který kdysi měl, zapomněl.
+  takže nemusí existovat žádný NVRAM záznam a stejný disk nabootuje bez ohledu na dříve uložené záznamy.
 - **BIOS** používá `syslinux`: `gptmbr.bin` zabírá prvních 440 bajtů disku a řetězově
   spouští `ldlinux.sys` v ESP, který čte `syslinux.cfg`. Aby to fungovalo, jsou potřeba tři
   věci a build ověřuje všechny tři: oddíl ESP má GPT atribut `LegacyBIOSBootable`
@@ -63,9 +62,6 @@ nebo SSD nemá žádné z omezení, kterým f2fs slouží.
 žádá kernel o lz4 kompresi clusterů ve F2FS (`compress_algorithm=lz4,compress_mode=fs`
 na řádku připojení s odpovídajícími feature bity v superblocku — build ověřuje, že je
 formátovač skutečně nastavil).
-
-`pc-f2fs` se staví jen pro x86_64. Počítače s i386 jsou vzácné natolik, že architekturu
-pokryje jediný 32bitový obraz (`pc-xfs`), a každý další obraz stojí v release matici celý job navíc.
 
 ## Jak ho zapsat
 

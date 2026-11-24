@@ -20,7 +20,7 @@ odmítá změny balíčku už publikované verze.
 
 ## Co knihovna obsahuje
 
-Sdílená i statická knihovna používají **mimalloc 3.7.0 s `MI_SECURE=0` na všech šesti
+Sdílená i statická knihovna používají **mimalloc 3.7.0 s `MI_SECURE=0` na všech čtyřech
 cílích**. Builder stáhne připnutý commit mimallocu zaznamenaný v
 `config/sources.lock.json`, ověří checksum vygenerovaného archivu a zahrne ho mezi vstupy
 pro rebuild bez sítě. Sdílená knihovna se navíc přepíše **BOLTem na x86_64, aarch64 a

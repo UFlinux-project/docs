@@ -22,7 +22,7 @@ Treat them as a preview.
 
 | Id | Machines and boards | Architecture | Kernel | Boot | Root fs | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| `pc-xfs` | PCs with a hard drive or SSD | x86_64, x86 | `linux-lts` | BIOS syslinux + UEFI systemd-boot | XFS | Supported |
+| `pc-xfs` | PCs with a hard drive or SSD | x86_64 | `linux-lts` | BIOS syslinux + UEFI systemd-boot | XFS | Supported |
 | `pc-f2fs` | PCs booted from a flash drive or SD card | x86_64 | `linux-lts` | BIOS syslinux + UEFI systemd-boot | f2fs (lz4) | Supported |
 | `rpi` | Raspberry Pi 3, 4 and 5 | aarch64 | `linux-rpi` | VideoCore firmware | f2fs | Supported |
 | `vm` | QEMU, KVM and other hypervisors | x86_64, aarch64 | `linux-virt` | UEFI + systemd-boot | XFS | Supported |
@@ -30,7 +30,7 @@ Treat them as a preview.
 | `spacemit-k1` | Orange Pi RV2, Orange Pi R2S, BananaPi-F3 | riscv64 | `linux-lts` | U-Boot distro boot | f2fs | Experimental |
 
 The two `pc-*` targets are not boards but machines: they write to an internal disk or to a
-USB stick and boot on any x86 firmware, so they are the only images that carry a BIOS and a
+USB stick and boot via BIOS or x86_64 UEFI, so they are the only images that carry a BIOS and a
 UEFI boot chain on the same disk. See [PCs](./pc.md).
 
 f2fs is used on the single-board targets and on `pc-f2fs` because it is built for the

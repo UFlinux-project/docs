@@ -23,14 +23,14 @@ Berte je jako náhled.
 | Id | Stroje a desky | Architektura | Jádro | Start | Kořen | Stav |
 | --- | --- | --- | --- | --- | --- | --- |
 | `pc-f2fs` | Počítače bootované z flash disku nebo SD karty | `x86_64` | `linux-lts` | BIOS syslinux + UEFI systemd-boot | f2fs (lz4) | Podporováno |
-| `pc-xfs` | Počítače s pevným diskem nebo SSD | `x86_64`, `x86` | `linux-lts` | BIOS syslinux + UEFI systemd-boot | XFS | Podporováno |
+| `pc-xfs` | Počítače s pevným diskem nebo SSD | `x86_64` | `linux-lts` | BIOS syslinux + UEFI systemd-boot | XFS | Podporováno |
 | `rpi` | Raspberry Pi 3, 4 a 5 | `aarch64` | `linux-rpi` | firmware VideoCore | f2fs | Podporováno |
 | `vm` | QEMU, KVM a další hypervize | `x86_64`, `aarch64` | `linux-virt` | UEFI + systemd-boot | XFS | Podporováno |
 | `qcs6490` | Arrow Dragon Q6A a podobné | `aarch64` | Nura `linux-postmarketos-qcom-sc7280` | firmware desky + systemd-boot | f2fs | Experimentální |
 | `spacemit-k1` | Orange Pi RV2, Orange Pi R2S, BananaPi-F3 | `riscv64` | `linux-lts` | distro boot U-Bootu | f2fs | Experimentální |
 
 Oba cíle `pc-*` nejsou desky, ale počítače: zapisují se na interní disk nebo USB flash a
-nabootují na libovolném x86 firmwaru, takže jsou to jediné obrazy, které mají zaváděcí
+nabootují přes BIOS nebo x86_64 UEFI, takže jsou to jediné obrazy, které mají zaváděcí
 řetězec pro BIOS i UEFI na jednom disku a balíčky `amd-ucode` a `intel-ucode`.
 
 Stav podpory jednotlivých zařízení je na jejich stránkách:

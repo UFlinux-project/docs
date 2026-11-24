@@ -50,7 +50,7 @@ Full details — layout, first login, the resize service, and updates — are on
 
 ## Notes for Pi users
 
-- The image is aarch64 only. A Raspberry Pi 3 in 32-bit mode wants a different image.
+- The image requires aarch64 firmware.
 - f2fs is used deliberately for SD-card wear levelling. The root is grown offline in the
   initramfs, before it is mounted, so the full size is there from the first boot — see
   [First boot](./index.md#first-boot-the-root-partition-grows).

@@ -33,7 +33,7 @@ when the cache is full.
 
 ## Which compressor
 
-LZ4 on `armv7`, `armv6`, `armv8l`, `riscv32`, `riscv64` and `mips`, or on any CPU with two
+LZ4 on `riscv64` or on any CPU with two
 cores or fewer. Zstandard everywhere else. LZ4 wins where cores are scarce because it needs
 far less work per page; Zstandard gives a better ratio where there are cores to spare. Both
 backends are built into the kernels UFLinux ships, so the choice is always available, and

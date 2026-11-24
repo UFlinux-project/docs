@@ -20,7 +20,7 @@ already published version.
 
 ## What is in the library
 
-The shared and static libraries use **mimalloc 3.7.0 with `MI_SECURE=0` on all six targets**. The
+The shared and static libraries use **mimalloc 3.7.0 with `MI_SECURE=0` on all four targets**. The
 builder fetches the pinned mimalloc Git commit recorded in `config/sources.lock.json`, verifies
 the generated archive's checksum, and includes it in the offline rebuild inputs. The shared
 library is additionally rewritten with **BOLT on x86_64, aarch64 and riscv64**.

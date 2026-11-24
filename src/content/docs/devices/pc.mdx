@@ -1,6 +1,6 @@
 ---
 title: PCs
-description: The preinstalled UFLinux disk images for x86 machines, with BIOS and UEFI boot on
+description: The preinstalled UFLinux disk images for x86_64 machines, with BIOS and UEFI boot on
   one disk.
 status: Supported
 source: docs/device-images.md
@@ -18,7 +18,7 @@ disk.
 | | `pc-xfs` | `pc-f2fs` |
 | --- | --- | --- |
 | For | PCs with a hard drive or SSD | PCs booted from a flash drive or SD card |
-| Architecture | x86_64 and x86 | x86_64 |
+| Architecture | x86_64 | x86_64 |
 | Kernel | Alpine `linux-lts` | Alpine `linux-lts` |
 | Boot | BIOS `syslinux` + UEFI `systemd-boot` | BIOS `syslinux` + UEFI `systemd-boot` |
 | Root filesystem | XFS, label `UFLINUX_ROOT` | f2fs with lz4 cluster compression |
@@ -31,13 +31,11 @@ covered by the automated boot tests — see [Device images](./index.md#how-solid
 
 ## One disk, both firmware classes
 
-A PC image has to boot on whatever firmware the machine happens to have, so the ESP carries
-two independent boot chains:
+The ESP carries two independent boot chains for BIOS and x86_64 UEFI.
 
-- **UEFI** uses the removable-media layout: `EFI/boot/bootx64.efi` (or `bootia32.efi` on the
-  32-bit image), `loader/loader.conf`, and `loader/entries/uflinux.conf`. Nothing is written
-  to the firmware's boot variables, so no NVRAM entry has to exist and the same disk boots
-  in any machine — including one that has forgotten the entry it once had.
+- **UEFI** uses the removable-media layout with `EFI/boot/bootx64.efi`,
+  `loader/loader.conf`, and `loader/entries/uflinux.conf`. Nothing is written
+  to the firmware's boot variables. The same disk boots without a preconfigured NVRAM entry.
 - **BIOS** uses `syslinux`: `gptmbr.bin` occupies the first 440 bytes of the disk and
   chainloads `ldlinux.sys` in the ESP, which reads `syslinux.cfg`. Three things are needed
   for that to work and the build verifies all three: the ESP partition carries the GPT
@@ -63,10 +61,6 @@ none of the constraints f2fs exists to serve.
 asks the kernel for F2FS's lz4 cluster compression (`compress_algorithm=lz4,compress_mode=fs`
 on the mount line, with the matching feature bits in the superblock — the build checks that
 the formatter really set them).
-
-`pc-f2fs` is built for x86_64 only. i386 PCs are rare enough that one 32-bit image
-(`pc-xfs`) covers the architecture, and every extra image costs a whole job in the release
-matrix.
 
 ## Writing it
 
